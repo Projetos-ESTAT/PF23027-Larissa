@@ -32,7 +32,7 @@ pacman::p_load(
 banco <- read.xlsx("banco/perfis_cad_analiseestatistica_19_07.xlsx", sheetIndex = 1)
 
 
-reg1 <- lm(data = banco[banco$CAD + banco$PMP - banco$CC<1,], CAD ~ ALTITUDE + PROFUND + DENSIDADE + CC + PMP + AREIA_GROS + AREIA_FINA + SILTE + ARGILA)
+reg1 <- lm(data = banco, CAD ~ ALTITUDE + PROFUND + DENSIDADE + CC + PMP + AREIA_GROS + AREIA_FINA + SILTE + ARGILA)
 
 summary(reg1)
 
