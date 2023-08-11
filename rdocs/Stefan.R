@@ -30,19 +30,39 @@ pacman::p_load(
 
 
 banco <- read.xlsx("banco/perfis_cad_analiseestatistica_19_07.xlsx", sheetIndex = 1)
+banco2 <- banco[banco$CAD + banco$PMP - banco$CC<1,]
 
-
-reg1 <- lm(data = banco, CAD ~ ALTITUDE + PROFUND + DENSIDADE + CC + PMP + AREIA_GROS + AREIA_FINA + SILTE + ARGILA)
+reg1 <- lm(data = banco2, CAD ~ ALTITUDE + PROFUND + DENSIDADE + CC + PMP + AREIA_GROS + AREIA_FINA + SILTE + ARGILA)
 
 summary(reg1)
 
-plot(reg1$fitted.values,banco$CAD)
+plot(reg1$fitted.values,banco2$CAD)
 
 
-reg2 <- lm(data = banco, CAD ~ CC + PMP)
+reg2 <- lm(data = banco2, CAD ~ CC + PMP)
 
 summary(reg2)
 
-plot(reg2$fitted.values,banco$CAD)
+plot(reg2$fitted.values,banco2$CAD)
 
 View(banco[banco$CAD + banco$PMP - banco$CC>1,])
+
+
+reg3 <- lm(data = banco2, CAD ~ ALTITUDE + PROFUND + DENSIDADE + AREIA_GROS + AREIA_FINA + SILTE + ARGILA)
+
+summary(reg3)
+
+plot(reg3$fitted.values,banco2$CAD)
+
+reg4 <- lm(data = banco2, CAD ~ ALTITUDE + PROFUND + DENSIDADE)
+
+summary(reg4)
+
+plot(reg4$fitted.values,banco2$CAD)
+
+
+regStep <- step(reg3)
+
+summary(regStep)
+
+plot(regStep$fitted.values,banco2$CAD)
