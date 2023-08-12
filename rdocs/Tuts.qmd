@@ -1,0 +1,208 @@
+---
+title: "PF23027"
+format: html
+editor: visual
+---
+
+```{r, include=FALSE}
+library("tidyverse")
+library("dplyr")
+library("openxlsx")
+library("nortest")
+```
+
+```{r, echo=FALSE}
+cores_estat <- c('#A11D21','#003366', '#CC9900', '#663333','#FF6600','#CC9966','#999966','#006606','#008091', '#041835','#666666')
+```
+
+```{r}
+theme_estat <- function (...) {
+theme <- ggplot2::theme_bw() +
+ggplot2::theme(
+axis.title.y = ggplot2:: element_text(colour = "black",
+size = 12),
+axis.title.x = ggplot2:: element_text(colour = "black",
+size = 12),
+axis.text = ggplot2:: element_text(colour = "black", size
+= 9.5),
+panel.border = ggplot2:: element_blank() ,
+axis.line = ggplot2:: element_line(colour = "black"),
+legend.position = "top",
+...
+)
+return (
+list(
+theme,
+scale_fill_manual(values = cores_estat ),
+scale_colour_manual(values = cores_estat )
+)
+)
+}
+```
+
+## Carregando o banco:
+
+```{r}
+banco <- read.xlsx("CAD_Larissa.xlsx")
+```
+
+# Análises:
+
+## Testando normalidade:
+
+```{r}
+lillie.test(banco$CAD)
+```
+
+
+## Drenagem:
+
+### Boxplot:
+
+```{r}
+banco %>%
+ggplot(aes(x = as.factor(DRENAGEM), y = CAD)) +
+  geom_boxplot(fill = c("#A11D21"), width = 0.5) +
+  stat_summary(
+    fun = "mean", geom = "point", shape = 23, size = 3, fill = "white"
+  ) +
+  labs(x = "Drenagem", y = "CAD") +
+  theme_estat()
+ggsave("box_drenagem.pdf", width = 158, height = 93, units = "mm")
+```
+
+### Teste de Associação:
+
+```{r}
+cor.test(banco$CAD, banco$DRENAGEM, method = "spearman", exact = F)
+```
+
+## Declividade
+
+### Boxplot:
+
+```{r}
+banco %>%
+ggplot(aes(x = as.factor(DECLIVID), y = CAD)) +
+  geom_boxplot(fill = c("#A11D21"), width = 0.5) +
+  stat_summary(
+    fun = "mean", geom = "point", shape = 23, size = 3, fill = "white"
+  ) +
+  labs(x = "Declividade", y = "CAD") +
+  theme_estat()
+ggsave("box_declividade.pdf", width = 158, height = 93, units = "mm")
+```
+
+### Teste de Associação:
+
+```{r}
+cor.test(banco$CAD, banco$DECLIVID, method = "spearman", exact = F)
+```
+
+## Classe
+
+### Boxplot:
+
+```{r}
+banco %>%
+ggplot(aes(x = CLASSE, y = CAD)) +
+  geom_boxplot(fill = c("#A11D21"), width = 0.5) +
+  stat_summary(
+    fun = "mean", geom = "point", shape = 23, size = 3, fill = "white"
+  ) +
+  labs(x = "Classe", y = "CAD") + 
+  scale_x_discrete(guide = guide_axis(n.dodge = 3)) +
+  theme_estat()
+ggsave("box_classe.pdf", width = 158, height = 93, units = "mm")
+```
+
+## Subclasse
+
+### Boxplot:
+
+```{r}
+banco %>%
+ggplot(aes(x = SUBCLASSE, y = CAD)) +
+  geom_boxplot(fill = c("#A11D21"), width = 0.5) +
+  stat_summary(
+    fun = "mean", geom = "point", shape = 23, size = 3, fill = "white"
+  ) +
+  labs(x = "Subclasse", y = "CAD") +
+  scale_x_discrete(guide = guide_axis(n.dodge = 5)) +
+  theme_estat()
+ggsave("box_subclasse.pdf", width = 158, height = 93, units = "mm")
+```
+
+## Domínios
+
+### Boxplot:
+
+```{r}
+banco %>%
+ggplot(aes(x = dominios_n, y = CAD)) +
+  geom_boxplot(fill = c("#A11D21"), width = 0.5) +
+  stat_summary(
+    fun = "mean", geom = "point", shape = 23, size = 3, fill = "white"
+  ) +
+  labs(x = "Domínios", y = "CAD") +
+  scale_x_discrete(guide = guide_axis(n.dodge = 3)) +
+  theme_estat()
+ggsave("box_dominios.pdf", width = 158, height = 93, units = "mm")
+```
+
+## Regiões
+
+### Boxplot:
+
+```{r}
+banco %>%
+ggplot(aes(x = regiao, y = CAD)) +
+  geom_boxplot(fill = c("#A11D21"), width = 0.5) +
+  stat_summary(
+    fun = "mean", geom = "point", shape = 23, size = 3, fill = "white"
+  ) +
+  labs(x = "Região", y = "CAD") +
+  scale_x_discrete(guide = guide_axis(n.dodge = 3)) +
+  theme_estat()
+ggsave("box_regiao.pdf", width = 158, height = 93, units = "mm")
+```
+
+## Mesorregião
+
+### Boxplot:
+
+```{r}
+banco %>%
+ggplot(aes(x = MESO, y = CAD)) +
+  geom_boxplot(fill = c("#A11D21"), width = 0.5) +
+  stat_summary(
+    fun = "mean", geom = "point", shape = 23, size = 3, fill = "white"
+  ) +
+  labs(x = "Mesorregião", y = "CAD") +
+  scale_x_discrete(guide = guide_axis(n.dodge = 2)) +
+  theme_estat()
+ggsave("box_mesorregiao.pdf", width = 158, height = 93, units = "mm")
+```
+
+### Teste de Comparação de Médias:
+
+```{r}
+kruskal.test(CAD ~ MESO, data = banco)
+```
+
+## Município
+
+### Boxplot:
+
+```{r}
+banco %>%
+ggplot(aes(x = Municipio, y = CAD)) +
+  geom_boxplot(fill = c("#A11D21"), width = 0.5) +
+  stat_summary(
+    fun = "mean", geom = "point", shape = 23, size = 3, fill = "white"
+  ) +
+  labs(x = "Municípios", y = "CAD") +
+  scale_x_discrete(guide = guide_axis(n.dodge = 10)) +
+  theme_estat()
+ggsave("box_municipios.pdf", width = 158, height = 93, units = "mm")
+```
