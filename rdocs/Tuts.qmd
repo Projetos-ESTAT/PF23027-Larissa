@@ -9,6 +9,7 @@ library("tidyverse")
 library("dplyr")
 library("openxlsx")
 library("nortest")
+library("rcompanion")
 ```
 
 ```{r, echo=FALSE}
@@ -53,23 +54,12 @@ banco <- read.xlsx("CAD_Larissa.xlsx")
 ```{r}
 lillie.test(banco$CAD)
 ```
+```{r}
+shapiro.test(banco$CAD)
+```
 
 
 ## Drenagem:
-
-### Boxplot:
-
-```{r}
-banco %>%
-ggplot(aes(x = as.factor(DRENAGEM), y = CAD)) +
-  geom_boxplot(fill = c("#A11D21"), width = 0.5) +
-  stat_summary(
-    fun = "mean", geom = "point", shape = 23, size = 3, fill = "white"
-  ) +
-  labs(x = "Drenagem", y = "CAD") +
-  theme_estat()
-ggsave("box_drenagem.pdf", width = 158, height = 93, units = "mm")
-```
 
 ### Teste de Associação:
 
@@ -77,11 +67,67 @@ ggsave("box_drenagem.pdf", width = 158, height = 93, units = "mm")
 cor.test(banco$CAD, banco$DRENAGEM, method = "spearman", exact = F)
 ```
 
-## Declividade
+### Teste de comparação de médias:
+
+```{r}
+kruskal.test(CAD ~ DRENAGEM, data = banco)
+```
+
+
 
 ### Boxplot:
 
 ```{r}
+banco$DRENAGEM[banco$DRENAGEM == 1] <- "Excessivamente \ndrenado"
+banco$DRENAGEM[banco$DRENAGEM == 2] <- "Fortemente \ndrenado"
+banco$DRENAGEM[banco$DRENAGEM == 3] <- "Acentuadamente \ndrenado"
+banco$DRENAGEM[banco$DRENAGEM == 4] <- "Bem \ndrenado"
+banco$DRENAGEM[banco$DRENAGEM == 5] <- "Moderadamente \ndrenado"
+banco$DRENAGEM[banco$DRENAGEM == 6] <- "Imperfeitamente \ndrenado"
+banco$DRENAGEM[banco$DRENAGEM == 7] <- "Mal \ndrenado"
+banco$DRENAGEM[banco$DRENAGEM == 8] <- "Muito mal \ndrenado"
+
+banco %>%
+ggplot(aes(x = DRENAGEM, y = CAD)) +
+  geom_boxplot(fill = c("#A11D21"), width = 0.5) +
+  stat_summary(
+    fun = "mean", geom = "point", shape = 23, size = 3, fill = "white"
+  ) +
+  labs(x = "Drenagem", y = "CAD") +
+  scale_x_discrete(guide = guide_axis(n.dodge = 2)) +
+  theme_estat()
+ggsave("box_drenagem.pdf", width = 158, height = 93, units = "mm")
+```
+## Declividade
+
+### Teste de Associação:
+
+```{r}
+cor.test(banco$CAD, banco$DECLIVID, method = "spearman", exact = F)
+```
+### Teste de comparação de médias:
+
+```{r}
+kruskal.test(CAD ~ DECLIVID, data = banco)
+```
+### Post Hoc:
+
+```{r}
+
+```
+
+### Boxplot:
+
+```{r}
+banco$DECLIVID[banco$DECLIVID == 1] <- "Plano"
+banco$DECLIVID[banco$DECLIVID == 2] <- "Suave ondulado"
+banco$DECLIVID[banco$DECLIVID == 3] <- "Ondulado"
+banco$DECLIVID[banco$DECLIVID == 4] <- "Forte ondulado"
+banco$DECLIVID[banco$DECLIVID == 5] <- "Montanhoso"
+banco$DECLIVID[banco$DECLIVID == 6] <- "Escarpado"
+
+
+
 banco %>%
 ggplot(aes(x = as.factor(DECLIVID), y = CAD)) +
   geom_boxplot(fill = c("#A11D21"), width = 0.5) +
@@ -91,12 +137,6 @@ ggplot(aes(x = as.factor(DECLIVID), y = CAD)) +
   labs(x = "Declividade", y = "CAD") +
   theme_estat()
 ggsave("box_declividade.pdf", width = 158, height = 93, units = "mm")
-```
-
-### Teste de Associação:
-
-```{r}
-cor.test(banco$CAD, banco$DECLIVID, method = "spearman", exact = F)
 ```
 
 ## Classe
@@ -115,6 +155,19 @@ ggplot(aes(x = CLASSE, y = CAD)) +
   theme_estat()
 ggsave("box_classe.pdf", width = 158, height = 93, units = "mm")
 ```
+### Coeficiente de Determinação:
+
+```{r}
+summary(lm(CAD ~ CLASSE, data = banco))$r.squared
+```
+
+### Teste de comparação de médias:
+
+```{r}
+kruskal.test(CAD ~ CLASSE, data = banco)
+```
+
+# Fazer Post Hoc
 
 ## Subclasse
 
@@ -132,6 +185,19 @@ ggplot(aes(x = SUBCLASSE, y = CAD)) +
   theme_estat()
 ggsave("box_subclasse.pdf", width = 158, height = 93, units = "mm")
 ```
+### Coeficiente de Determinação:
+
+```{r}
+summary(lm(CAD ~ SUBCLASSE, data = banco))$r.squared
+```
+
+### Teste de comparação de médias:
+
+```{r}
+kruskal.test(CAD ~ SUBCLASSE, data = banco)
+```
+
+#Fazer Post Hoc
 
 ## Domínios
 
@@ -150,6 +216,21 @@ ggplot(aes(x = dominios_n, y = CAD)) +
 ggsave("box_dominios.pdf", width = 158, height = 93, units = "mm")
 ```
 
+
+### Coeficiente de Determinação:
+
+```{r}
+summary(lm(CAD ~ dominios_n, data = banco))$r.squared
+```
+
+
+### Teste de comparação de médias:
+
+```{r}
+kruskal.test(CAD ~ dominios_n, data = banco)
+```
+# Fazer Post Hoc
+
 ## Regiões
 
 ### Boxplot:
@@ -166,6 +247,19 @@ ggplot(aes(x = regiao, y = CAD)) +
   theme_estat()
 ggsave("box_regiao.pdf", width = 158, height = 93, units = "mm")
 ```
+### Coeficiente de Determinação:
+
+```{r}
+summary(lm(CAD ~ regiao, data = banco))$r.squared
+```
+
+
+### Teste de comparação de médias:
+
+```{r}
+kruskal.test(CAD ~ regiao, data = banco)
+```
+# Fazer Post Hoc
 
 ## Mesorregião
 
@@ -183,12 +277,19 @@ ggplot(aes(x = MESO, y = CAD)) +
   theme_estat()
 ggsave("box_mesorregiao.pdf", width = 158, height = 93, units = "mm")
 ```
+### Coeficiente de Determinação:
+
+```{r}
+summary(lm(CAD ~ MESO, data = banco))$r.squared
+```
+
 
 ### Teste de Comparação de Médias:
 
 ```{r}
 kruskal.test(CAD ~ MESO, data = banco)
 ```
+# Fazer Post Hoc
 
 ## Município
 
@@ -206,3 +307,17 @@ ggplot(aes(x = Municipio, y = CAD)) +
   theme_estat()
 ggsave("box_municipios.pdf", width = 158, height = 93, units = "mm")
 ```
+
+### Coeficiente de Determinação:
+
+```{r}
+summary(lm(CAD ~ Municipio, data = banco))$r.squared
+```
+
+### Teste de comparação de médias:
+
+```{r}
+kruskal.test(CAD ~ Municipio, data = banco)
+```
+
+#Fazer Post Hoc
