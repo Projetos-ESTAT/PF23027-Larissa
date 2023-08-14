@@ -4,16 +4,6 @@ pacman::p_load(
   "kableExtra", "ggcorrplot", "psych", "purrr",
   "caret", "gvlma", "lmtest"
 )
-## pacotes
-library(olsrr)
-require(lmtest)
-require(lawstat)
-library(EnvStats)
-library(car)
-require(leaps)
-library(caret) 
-library(readxl)
-
 
 # ---------------------------------------------------------------------------- #
 
@@ -37,7 +27,6 @@ library(readxl)
 # de teste depreciados, ou ao menos deixando como comentário. Dê preferência
 # as funções dos pacotes contidos no Tidyverse para realizar suas análises.
 # ---------------------------------------------------------------------------- #
-
 
 ## pacotes
 library(olsrr)
@@ -119,3 +108,19 @@ mean(vi)
 
 'homocedasticidade foi atendida, a normalidade não, a multicolinearidade influencia nos valores das estimativas,
 não há autocorrelação nos resíduos, independencia e linearidade ??? '
+
+# TRANSFORMAÇÕES 
+
+boxCox(reg1, ylab ="Log-Verossimilhança") # melhor valode lambda é um ( ou seja, sem transfotmação)
+
+CAD1<- banco1$CAD^(-1)
+reg2 <- lm(data = banco,CAD1~ALTITUDE + PROFUND + DENSIDADE + CC + PMP + AREIA_GROS + AREIA_FINA + SILTE + ARGILA)
+summary(reg2)
+ols_test_normality(reg2)
+
+CAD2<- log(banco1$CAD)
+reg3 <- lm(data = banco,CAD2~ALTITUDE + PROFUND + DENSIDADE + CC + PMP + AREIA_GROS + AREIA_FINA + SILTE + ARGILA)
+summary(reg3)
+ols_test_normality(reg3)
+
+
