@@ -12,6 +12,7 @@ library(EnvStats)
 library(car)
 require(leaps)
 library(caret) 
+library(readxl)
 
 
 # ---------------------------------------------------------------------------- #
@@ -37,11 +38,26 @@ library(caret)
 # as funções dos pacotes contidos no Tidyverse para realizar suas análises.
 # ---------------------------------------------------------------------------- #
 
-banco <- read.xlsx("banco/perfis_cad_analiseestatistica_19_07.xlsx", sheetIndex = 1)
 
-# CÓDIGO STEFAN
+## pacotes
+library(olsrr)
+require(lmtest)
+require(lawstat)
+library(EnvStats)
+library(car)
+require(leaps)
+library(caret) 
+library(readxl)
+library(Hmisc)
+library(corrplot)
+library(tidyverse)
+setwd('D:/Downloads/ESTAT/PF23027-Larissa/banco')
+banco <- read_excel("perfis_cad_analiseestatistica_19_07.xlsx")
 
 # modelo inicial
+
+banco1<-banco%>%
+  select(Altitude = ALTITUDE, Profundidade = PROFUND, Densidade=DENSIDADE, CC, PMP, CAD, `Areia Fina`= AREIA_FINA,`Areia Grossa`=AREIA_GROS, Silte=SILTE, Argila=ARGILA)
 
 reg1 <- lm(data = banco, CAD ~ ALTITUDE + PROFUND + DENSIDADE + CC + PMP + AREIA_GROS + AREIA_FINA + SILTE + ARGILA)
 
@@ -49,25 +65,57 @@ summary(reg1)
 
 plot(reg1$fitted.values,banco$CAD)
 
+#View(banco[banco$CAD + banco$PMP - banco$CC>1,])
 
-reg2 <- lm(data = banco, CAD ~ CC + PMP)
+############### matriz de correlações e correlograma ###############
 
-summary(reg2)
+correlação<-as.data.frame(cor(banco1))
 
-plot(reg2$fitted.values,banco$CAD)
+# 8.0 Matriz de correlação ----
 
-View(banco[banco$CAD + banco$PMP - banco$CC>1,])
+dados <- banco1 |> # utilizar apenas valores numéricos!
+  select(CAD, Altitude, Profundidade, Densidade, CC, PMP, `Areia Fina`,`Areia Grossa`,Silte, Argila)
+res2 <- rcorr(as.matrix(dados))
+# 8.1 Explorar os parâmetros: desta forma, as correlações insignificantes (<0.05) ficam de fora ----
+corrplot(res2$r, type="upper", order="hclust", 
+         p.mat = res2$P, sig.level = 0.05, insig = "blank")
+# 8.2 Desta forma, ficam com um X ----
+corrplot(res2$r, type="upper", order="hclust", 
+         p.mat = res2$P, sig.level = 0.05)
+ggsave("correlação.pdf", width = 158, height = 93, units = "mm") 
+
+# # 8.3 Desta forma, inverte o triângulo ----
+# corrplot(res2$r, type="lower", order="hclust", 
+#          p.mat = res2$P, sig.level = 0.05, insig = "blank")
 
 ############# diagnostico inicial #############
 
 # linearidade
 
-# independencia
+plot(reg1$fitted.values, reg1$residuals, xlab = "Valores Ajustados", ylab = "Resíduos")
+abline(h = 0, col = "red")  # Linha horizontal em y = 0 para auxiliar na visualização
 
-# homocedasticidade 
+# Normalidade
 
-# normalidade
+shapiro.test(reg1$residuals)
+ols_test_normality(reg1)
 
-############### matriz de correlações ###############
+# Independencia
 
-cor(banco)
+plot(reg1$residuals)
+
+# correlação serial 
+
+dwtest(reg1)
+
+# Homocedasticidade (Breusch-Pagan)
+
+bptest(reg1)
+
+# multicolinearidade
+
+(vi<-vif(reg1))
+mean(vi)
+
+'homocedasticidade foi atendida, a normalidade não, a multicolinearidade influencia nos valores das estimativas,
+não há autocorrelação nos resíduos, independencia e linearidade ??? '
