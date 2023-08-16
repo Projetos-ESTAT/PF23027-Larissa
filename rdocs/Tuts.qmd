@@ -9,7 +9,7 @@ library("tidyverse")
 library("dplyr")
 library("openxlsx")
 library("nortest")
-library("rcompanion")
+library("FSA")
 ```
 
 ```{r, echo=FALSE}
@@ -47,7 +47,26 @@ scale_colour_manual(values = cores_estat )
 banco <- read.xlsx("CAD_Larissa.xlsx")
 ```
 
+### Criando função:
+
+```{r}
+summari <- function(x) {
+result <- c(summary(x), "desvio padrão" = sd(x)) 
+return(result)
+}
+```
+
 # Análises:
+
+
+```{r}
+ggplot(banco) +
+  aes(x = CAD) +
+  geom_histogram(colour = "white", fill = "#A11D21", binwidth = 7) +
+  labs(x = "CAD", y = "Frequência Absoluta") +
+  theme_estat()
+ggsave("CAD.pdf", width = 158, height = 93, units = "mm")
+```
 
 ## Testando normalidade:
 
@@ -88,6 +107,13 @@ ggplot(aes(x = as.factor(DRENAGEM), y = CAD)) +
 ggsave("box_drenagem.pdf", width = 158, height = 93, units = "mm")
 ```
 
+### Medidas-resumo
+
+```{r}
+tapply(banco$CAD, banco$DRENAGEM, summari)
+```
+
+
 ## Declividade
 
 ### Boxplot:
@@ -103,6 +129,11 @@ ggplot(aes(x = as.factor(DECLIVID), y = CAD)) +
   labs(x = "Declividade", y = "CAD") +
   theme_estat()
 ggsave("box_declividade.pdf", width = 158, height = 93, units = "mm")
+```
+### Medidas-resumo
+
+```{r}
+tapply(banco$CAD, banco$DECLIVID, summari)
 ```
 
 ### Teste de Associação:
@@ -120,7 +151,8 @@ kruskal.test(CAD ~ DECLIVID, data = banco)
 ### Post Hoc:
 
 ```{r}
-
+dunnTest(CAD ~ as.factor(DECLIVID), data = banco)$res %>%
+filter(P.adj < 0.05)
 ```
 
 
@@ -141,6 +173,13 @@ ggplot(aes(x = CLASSE, y = CAD)) +
 ggsave("box_classe.pdf", width = 158, height = 93, units = "mm")
 ```
 
+### Medidas-resumo
+
+```{r}
+tapply(banco$CAD, banco$CLASSE, summari)
+```
+
+
 ### Coeficiente de Determinação:
 
 ```{r}
@@ -153,7 +192,13 @@ summary(lm(CAD ~ CLASSE, data = banco))$r.squared
 kruskal.test(CAD ~ CLASSE, data = banco)
 ```
 
-# Fazer Post Hoc
+### Post Hoc
+
+```{r}
+dunnTest(CAD ~ CLASSE, data = banco)$res %>%
+filter(P.adj < 0.05)
+```
+
 
 ## Subclasse
 
@@ -172,6 +217,12 @@ ggplot(aes(x = SUBCLASSE, y = CAD)) +
 ggsave("box_subclasse.pdf", width = 158, height = 93, units = "mm")
 ```
 
+### Medidas-resumo
+
+```{r}
+tapply(banco$CAD, banco$SUBCLASSE, summari)
+```
+
 ### Coeficiente de Determinação:
 
 ```{r}
@@ -184,7 +235,13 @@ summary(lm(CAD ~ SUBCLASSE, data = banco))$r.squared
 kruskal.test(CAD ~ SUBCLASSE, data = banco)
 ```
 
-#Fazer Post Hoc
+### Post Hoc
+
+```{r}
+dunnTest(CAD ~ SUBCLASSE, data = banco)$res %>%
+filter(P.adj < 0.05)
+```
+
 
 ## Domínios
 
@@ -202,6 +259,11 @@ ggplot(aes(x = dominios_n, y = CAD)) +
   theme_estat()
 ggsave("box_dominios.pdf", width = 158, height = 93, units = "mm")
 ```
+### Medidas-resumo
+
+```{r}
+tapply(banco$CAD, banco$dominios_n, summari)
+```
 
 ### Coeficiente de Determinação:
 
@@ -215,7 +277,13 @@ summary(lm(CAD ~ dominios_n, data = banco))$r.squared
 kruskal.test(CAD ~ dominios_n, data = banco)
 ```
 
-# Fazer Post Hoc
+### Post Hoc
+
+```{r}
+dunnTest(CAD ~ dominios_n, data = banco)$res %>%
+filter(P.adj < 0.05)
+```
+
 
 ## Regiões
 
@@ -234,6 +302,12 @@ ggplot(aes(x = regiao, y = CAD)) +
 ggsave("box_regiao.pdf", width = 158, height = 93, units = "mm")
 ```
 
+### Medidas-resumo
+
+```{r}
+tapply(banco$CAD, banco$regiao, summari)
+```
+
 ### Coeficiente de Determinação:
 
 ```{r}
@@ -246,7 +320,13 @@ summary(lm(CAD ~ regiao, data = banco))$r.squared
 kruskal.test(CAD ~ regiao, data = banco)
 ```
 
-# Fazer Post Hoc
+### Post Hoc
+
+```{r}
+dunnTest(CAD ~ regiao, data = banco)$res %>%
+filter(P.adj < 0.05)
+```
+
 
 ## Mesorregião
 
@@ -265,6 +345,12 @@ ggplot(aes(x = MESO, y = CAD)) +
 ggsave("box_mesorregiao.pdf", width = 158, height = 93, units = "mm")
 ```
 
+### Medidas-resumo
+
+```{r}
+tapply(banco$CAD, banco$MESO, summari)
+```
+
 ### Coeficiente de Determinação:
 
 ```{r}
@@ -277,7 +363,13 @@ summary(lm(CAD ~ MESO, data = banco))$r.squared
 kruskal.test(CAD ~ MESO, data = banco)
 ```
 
-# Fazer Post Hoc
+### Post Hoc
+
+```{r}
+dunnTest(CAD ~ MESO, data = banco)$res %>%
+filter(P.adj < 0.05)
+```
+
 
 ## Município
 
@@ -296,6 +388,12 @@ ggplot(aes(x = Municipio, y = CAD)) +
 ggsave("box_municipios.pdf", width = 158, height = 93, units = "mm")
 ```
 
+### Medidas-resumo
+
+```{r}
+tapply(banco$CAD, banco$Municipio, summari)
+```
+
 ### Coeficiente de Determinação:
 
 ```{r}
@@ -308,4 +406,10 @@ summary(lm(CAD ~ Municipio, data = banco))$r.squared
 kruskal.test(CAD ~ Municipio, data = banco)
 ```
 
-#Fazer Post Hoc
+### Post Hoc
+
+```{r}
+dunnTest(CAD ~ Municipio, data = banco)$res %>%
+filter(P.adj < 0.05)
+```
+
