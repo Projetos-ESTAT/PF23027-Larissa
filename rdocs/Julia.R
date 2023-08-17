@@ -1,9 +1,4 @@
 source("rdocs/source/packages.R")
-pacman::p_load(
-  "readxl", "dplyr", "ggplot2", "tidyr",
-  "kableExtra", "ggcorrplot", "psych", "purrr",
-  "caret", "gvlma", "lmtest"
-)
 
 # ---------------------------------------------------------------------------- #
 
@@ -28,7 +23,13 @@ pacman::p_load(
 # as funções dos pacotes contidos no Tidyverse para realizar suas análises.
 # ---------------------------------------------------------------------------- #
 
+pacman::p_load(
+  "readxl", "dplyr", "ggplot2", "tidyr",
+  "kableExtra", "ggcorrplot", "psych", "purrr",
+  "caret", "gvlma", "lmtest"
+)
 ## pacotes
+library(summarytools)
 library(olsrr)
 require(lmtest)
 require(lawstat)
@@ -42,54 +43,79 @@ library(corrplot)
 library(tidyverse)
 setwd('D:/Downloads/ESTAT/PF23027-Larissa/banco')
 banco <- read_excel("perfis_cad_analiseestatistica_19_07.xlsx")
+caminho <- "D:/Downloads/ESTAT/PF23027-Larissa/resultados"
 
-# modelo inicial
-
-banco1<-banco%>%
-  select(Altitude = ALTITUDE, Profundidade = PROFUND, Densidade=DENSIDADE, CC, PMP, CAD, `Areia Fina`= AREIA_FINA,`Areia Grossa`=AREIA_GROS, Silte=SILTE, Argila=ARGILA)
-
-reg1 <- lm(data = banco, CAD ~ ALTITUDE + PROFUND + DENSIDADE + CC + PMP + AREIA_GROS + AREIA_FINA + SILTE + ARGILA)
-
-summary(reg1)
-
-plot(reg1$fitted.values,banco$CAD)
-
-#View(banco[banco$CAD + banco$PMP - banco$CC>1,])
+####################################################################################################################
 
 ############### matriz de correlações e correlograma ###############
 
+# seleção das variáveis quantitativas
+banco1<-banco%>%
+  select(CAD, Altitude = ALTITUDE, `Areia Fina`= AREIA_FINA,`Areia Grossa`=AREIA_GROS, Argila=ARGILA, CC,  Densidade=DENSIDADE, Profundidade = PROFUND, PMP,  Silte=SILTE)
+
+# matriz de correlações
 correlação<-as.data.frame(cor(banco1))
 
-# 8.0 Matriz de correlação ----
+' CAD e CC -> 0,94
+  CAD e PMP -> 0,84
+  CC E PMP ->  0,97 '
 
-dados <- banco1 |> # utilizar apenas valores numéricos!
-  select(CAD, Altitude, Profundidade, Densidade, CC, PMP, `Areia Fina`,`Areia Grossa`,Silte, Argila)
+# correlograma
+dados <- banco1 |> 
+  select(CAD, Altitude, `Areia Fina`,`Areia Grossa`, Argila,  CC, Densidade, Profundidade,PMP, Silte)
 res2 <- rcorr(as.matrix(dados))
-# 8.1 Explorar os parâmetros: desta forma, as correlações insignificantes (<0.05) ficam de fora ----
 corrplot(res2$r, type="upper", order="hclust", 
          p.mat = res2$P, sig.level = 0.05, insig = "blank")
-# 8.2 Desta forma, ficam com um X ----
+# correlações insignificantes (<0.05) ficam com um X 
 corrplot(res2$r, type="upper", order="hclust", 
          p.mat = res2$P, sig.level = 0.05)
-ggsave("correlação.pdf", width = 158, height = 93, units = "mm") 
+#ggsave(filename = file.path(caminho,"correlograma.png"), width = 158, height = 93, units = "mm") 
+#ggsave(filename = file.path(caminho,"correlograma.pdf"), width = 158, height = 93, units = "mm")
 
-# # 8.3 Desta forma, inverte o triângulo ----
-# corrplot(res2$r, type="lower", order="hclust", 
-#          p.mat = res2$P, sig.level = 0.05, insig = "blank")
+' O argumento order = "hclust" indica um agrupamento hierárquico para determinar a ordem das variáveis, ou seja,
+as variáveis que têm correlações mais semelhantes entre si serão agrupadas e exibidas próximas umas das outras'
 
-############# diagnostico inicial #############
+####################################################################################################################
+
+############### modelo inicial ###############
+
+reg1 <- lm(data = banco, CAD ~ ALTITUDE + PROFUND + CC + PMP + SILTE + ARGILA + AREIA_GROS + AREIA_FINA + DENSIDADE)
+
+summary(reg1) 
+
+' Adjusted R-squared:  0.9978 
+
+variáveis significantes: CC, PMP (ALTITUDE e PROFUNDIDADE, considerando alpha=0,05)
+Manter as demais variáveis não agrega valor ao modelo.'
+
+plot(reg1$fitted.values,banco$CAD)
+
+' º consideranto todas as variáveis
+  º uma outlier visível, reta perfeita'
+
+
+####################################################################################################################
+
+############### diagnóstico inicial ###############
+
+resíduos = reg1$residuals
+
+# histograma dos resíduos
+hist(resíduos)
+
+# normalidade 
+
+qqnorm(resíduos)
+qqline(resíduos)
+shapiro.test(resíduos)
+ols_test_normality(resíduos)
 
 # linearidade
 
 plot(reg1$fitted.values, reg1$residuals, xlab = "Valores Ajustados", ylab = "Resíduos")
-abline(h = 0, col = "red")  # Linha horizontal em y = 0 para auxiliar na visualização
+abline(h = 0, col = "red")  # linha horizontal em y = 0 para auxiliar na visualização
 
-# Normalidade
-
-shapiro.test(reg1$residuals)
-ols_test_normality(reg1)
-
-# Independencia
+# independencia
 
 plot(reg1$residuals)
 
@@ -97,30 +123,82 @@ plot(reg1$residuals)
 
 dwtest(reg1)
 
+' HO) DW=2
+  H1) DW diferente de 2
+não rejeita-se H0'
+
 # Homocedasticidade (Breusch-Pagan)
 
 bptest(reg1)
+
+' HO) variancias iguais
+  H1) há pelo menos uma diferente
+p-value = 0.2011 > 0,05'
 
 # multicolinearidade
 
 (vi<-vif(reg1))
 mean(vi)
 
-'homocedasticidade foi atendida, a normalidade não, a multicolinearidade influencia nos valores das estimativas,
-não há autocorrelação nos resíduos, independencia e linearidade ??? '
+' média do VIF muito superior a 1 (7328.465)'
 
-# TRANSFORMAÇÕES 
+reduced_data <- subset(banco1, select = -CAD)
+corr_matrix = round(cor(reduced_data), 2)
+ggcorrplot(corr_matrix, hc.order = TRUE, type = "lower",
+           lab = TRUE)
 
-boxCox(reg1, ylab ="Log-Verossimilhança") # melhor valode lambda é um ( ou seja, sem transfotmação)
+' Podemos notar uma correlação forte  (valor é superior a 0,8) entre PMP e CC 
+   Esse resultado faz sentido? se uma coisa for derivada da outra é possível tirar uma delas '
 
-CAD1<- banco1$CAD^(-1)
-reg2 <- lm(data = banco,CAD1~ALTITUDE + PROFUND + DENSIDADE + CC + PMP + AREIA_GROS + AREIA_FINA + SILTE + ARGILA)
+####################################################################################################################
+
+############### segundo modelo ############### eliminar a multicolinearidade
+
+reg2 <- lm(data = banco, CAD ~ ALTITUDE + PROFUND + CC + SILTE + ARGILA + AREIA_GROS + AREIA_FINA + DENSIDADE)
+
 summary(reg2)
-ols_test_normality(reg2)
 
-CAD2<- log(banco1$CAD)
-reg3 <- lm(data = banco,CAD2~ALTITUDE + PROFUND + DENSIDADE + CC + PMP + AREIA_GROS + AREIA_FINA + SILTE + ARGILA)
-summary(reg3)
-ols_test_normality(reg3)
+'Adjusted R-squared:  0.9102
+ variáveis significantes: CC, ALTITUDE, PROFUNDIDADE e DENSIDADE
+Manter as demais variáveis não agrega valor ao modelo.'
+
+plot(reg2$fitted.values,banco$CAD)
+
+############### comparação ###############
+
+'H0 ) a variável removida não têm significância
+ H1 ) a variável é significante' 
+
+anova(reg1,reg2)
+
+' o valor p é muito pequeno (menor que 0,05), portanto rejeitamos a hipótese nula, 
+  significando que o segundo modelo não é uma melhoria do primeiro. '
 
 
+
+
+
+
+# ############# Observações influentes #############
+# 
+# medinflu1<-influence.measures(reg1)
+# indice<-c(1:1209)
+# 
+# # Utilizando hii
+# plot(indice,hatvalues(reg1),type="l") 
+# 
+# 
+# # Betas
+# dfbetaPlots(reg1) 
+# ols_plot_dfbetas(reg1) # 843 e # 623
+# 
+# 
+# # Dffits
+# plot(indice,abs(dffits(reg1)), type = "l") 
+# 
+# # Cook
+# plot(indice,cooks.distance(reg1), type = "l")
+# plot(reg1,which=4)
+# ols_plot_cooksd_chart(reg1)
+# 
+# 
