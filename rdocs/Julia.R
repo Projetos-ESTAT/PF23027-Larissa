@@ -79,7 +79,7 @@ as variáveis que têm correlações mais semelhantes entre si serão agrupadas 
 
 ############### modelo inicial ###############
 
-reg1 <- lm(data = banco, CAD ~ ALTITUDE + PROFUND + CC + PMP + SILTE + ARGILA + AREIA_GROS + AREIA_FINA + DENSIDADE)
+reg1 <- lm(data = banco, CAD^(-1) ~  ALTITUDE + PROFUND  + SILTE + ARGILA + AREIA_GROS + AREIA_FINA + DENSIDADE)
 
 summary(reg1) 
 
@@ -121,9 +121,27 @@ ols_plot_cooksd_chart(reg1)
 
 ' 623, 782, 843'
 
+# banco<-banco[-843,]
+
 ####################################################################################################################
 
 ############### diagnóstico inicial ###############
+
+plot(banco1)
+
+' relação linear só entre CC e PMP e elas com relação a CAD '
+
+hist(banco1$CAD)
+hist(banco1$Altitude)
+hist(banco1$CC)
+hist(banco1$PMP)
+hist(banco1$Silte)
+hist(banco1$Profundidade)
+hist(banco1$Argila)
+hist(banco1$`Areia Fina`)
+hist(banco1$`Areia Grossa`)
+
+' nenhuma das variáveis possui uma distribuição normalizada, a grande parte é assimétrica a esquerda '
 
 resíduos = reg1$residuals
 
@@ -136,6 +154,12 @@ qqnorm(resíduos)
 qqline(resíduos)
 shapiro.test(resíduos)
 ols_test_normality(resíduos)
+
+
+' os dados não seguem distribuição normal e a regressão pode sofrer muita interferência da 
+assimetria dos dados quando construídos sobre conjuntos que não possuam a distribuição normal.
+
+º transformação dos dados '
 
 # linearidade
 
@@ -177,6 +201,52 @@ ggcorrplot(corr_matrix, hc.order = TRUE, type = "lower",
 ' Podemos notar uma correlação forte  (valor é superior a 0,8) entre PMP e CC 
    Esse resultado faz sentido? se uma coisa for derivada da outra é possível tirar uma delas '
 
+############### transformação ###############
+
+############### novo modelo ###############
+
+reg4<- lm(data = banco, log(CAD) ~  CC + PMP)
+
+summary(reg4)
+
+plot(reg4$fitted.values,banco$CAD)
+
+resíduos = reg4$residuals
+
+# histograma dos resíduos
+hist(resíduos)
+
+# normalidade 
+
+qqnorm(resíduos)
+qqline(resíduos)
+shapiro.test(resíduos)
+ols_test_normality(resíduos)
+
+# linearidade
+
+plot(reg1$fitted.values, reg1$residuals, xlab = "Valores Ajustados", ylab = "Resíduos")
+abline(h = 0, col = "red")  # linha horizontal em y = 0 para auxiliar na visualização
+
+# independencia
+
+plot(reg4$residuals)
+
+# correlação serial 
+
+dwtest(reg4)
+
+# Homocedasticidade (Breusch-Pagan)
+
+bptest(reg4)
+
+# multicolinearidade
+
+(vi<-vif(reg4))
+mean(vi)
+
+plot(reg4$fitted.values,banco$CAD)
+
 ####################################################################################################################
 
 ############### eliminar a multicolinearidade ############### 
@@ -184,7 +254,7 @@ ggcorrplot(corr_matrix, hc.order = TRUE, type = "lower",
 ' a) Retirada das variáveis multicolineares do modelo
   b) Análise de componentes principais para criação de fatores ortogonais não correlacionados'
 
-############### criar um novo modelo retirando PMP ###############
+############### criar um novo modelo retirando PMP ou CC ###############
 
 reg2 <- lm(data = banco, CAD ~ ALTITUDE + PROFUND + CC + SILTE + ARGILA + AREIA_GROS + AREIA_FINA + DENSIDADE)
 
@@ -202,7 +272,7 @@ plot(reg2$fitted.values,banco$CAD)
 
 anova(reg1,reg2)
 
-' o valor p é muito pequeno (menor que 0,05), portanto rejeitamos a hipótese nula, 
+' para ambas as retiradas, o valor p é muito pequeno (menor que 0,05), portanto rejeitamos a hipótese nula, 
   significando que o segundo modelo não é uma melhoria do primeiro. '
 
 ############### agrupamento de variaveis por PCA ###############
@@ -247,7 +317,7 @@ ols_test_normality(resíduos)
 
 # linearidade
 
-plot(reg3$fitted.values, reg1$residuals, xlab = "Valores Ajustados", ylab = "Resíduos")
+plot(reg3$fitted.values, reg3$residuals, xlab = "Valores Ajustados", ylab = "Resíduos")
 abline(h = 0, col = "red")  # linha horizontal em y = 0 para auxiliar na visualização
 
 # independencia
@@ -280,4 +350,13 @@ corr_matrix = round(cor(reduced_data), 2)
 ggcorrplot(corr_matrix, hc.order = TRUE, type = "lower",
            lab = TRUE)
 
-
+# # estimating the variance of y for different values of x
+# variance = lm(abs(regStep$residuals) ~ regStep$fitted.values)$fitted.values^2
+# # calculating the weights
+# weights = ((1 / variance)/20)^2
+# # weighted regression model
+# weighted_model = reg3 <- lm(data = banco2, CAD ~ ALTITUDE + PROFUND + DENSIDADE + AREIA_GROS  + SILTE + ARGILA, weights = weights)
+# summary(weighted_model)
+# plot(weighted_model$fitted.values,regStep$residuals)
+# plot(weighted_model$fitted.values,banco2$CAD)
+# bptest(weighted_model)
