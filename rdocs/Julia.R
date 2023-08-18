@@ -93,6 +93,33 @@ plot(reg1$fitted.values,banco$CAD)
 ' º consideranto todas as variáveis
   º uma outlier visível, reta perfeita'
 
+############# Observações influentes #############
+
+medinflu1<-influence.measures(reg1)
+indice<-c(1:1209)
+
+# Utilizando hii
+plot(indice,hatvalues(reg1),type="l")
+
+' 623 '
+
+# Betas
+dfbetaPlots(reg1)
+ols_plot_dfbetas(reg1)
+
+' 843 e 623 '
+
+# Dffits
+plot(indice,abs(dffits(reg1)), type = "l")
+
+' 843 '
+
+# Cook
+plot(indice,cooks.distance(reg1), type = "l")
+plot(reg1,which=4)
+ols_plot_cooksd_chart(reg1)
+
+' 623, 782, 843'
 
 ####################################################################################################################
 
@@ -152,7 +179,12 @@ ggcorrplot(corr_matrix, hc.order = TRUE, type = "lower",
 
 ####################################################################################################################
 
-############### segundo modelo ############### eliminar a multicolinearidade
+############### eliminar a multicolinearidade ############### 
+
+' a) Retirada das variáveis multicolineares do modelo
+  b) Análise de componentes principais para criação de fatores ortogonais não correlacionados'
+
+############### criar um novo modelo retirando PMP ###############
 
 reg2 <- lm(data = banco, CAD ~ ALTITUDE + PROFUND + CC + SILTE + ARGILA + AREIA_GROS + AREIA_FINA + DENSIDADE)
 
@@ -164,9 +196,8 @@ Manter as demais variáveis não agrega valor ao modelo.'
 
 plot(reg2$fitted.values,banco$CAD)
 
-############### comparação ###############
-
-'H0 ) a variável removida não têm significância
+' comparando os modelos:
+ H0 ) a variável removida não têm significância
  H1 ) a variável é significante' 
 
 anova(reg1,reg2)
@@ -174,31 +205,79 @@ anova(reg1,reg2)
 ' o valor p é muito pequeno (menor que 0,05), portanto rejeitamos a hipótese nula, 
   significando que o segundo modelo não é uma melhoria do primeiro. '
 
+############### agrupamento de variaveis por PCA ###############
+
+' agrupamento das variáveis multicolineares, por meio de técnicas de redução, como Análise de Componentes Principais '
+
+dados<-select(banco, CC, PMP)
+padronizados <- scale(dados)
+pca <- prcomp(padronizados)
+# componentes principais: pca$x
+# pca$sdev^2 / sum(pca$sdev^2)
+summary(pca)
+PCA<- pca$x[, 1]
+
+'0.98717986 0.01282014
+uma componente é suficiente'
+
+banco$PCA <- PCA
+banco1$PCA <- PCA
+
+'a primeira componente principal foi extraída e representa uma combinação linear de CC e PMP 
+que captura a maior parte da variância dos dados, usada como uma nova variável não correlacionada'
+
+banco2 <- banco1[, !colnames(banco1) %in% c("CC", "PMP")]
+
+reg3 <- lm(data = banco, CAD ~ ALTITUDE + PROFUND + PCA + SILTE + ARGILA + AREIA_GROS + AREIA_FINA + DENSIDADE)
+
+summary(reg3)
+
+########## pressupostos ##########
+
+resíduos = reg3$residuals
+
+hist(resíduos)
+
+# normalidade 
+
+qqnorm(resíduos)
+qqline(resíduos)
+shapiro.test(resíduos)
+ols_test_normality(resíduos)
+
+# linearidade
+
+plot(reg3$fitted.values, reg1$residuals, xlab = "Valores Ajustados", ylab = "Resíduos")
+abline(h = 0, col = "red")  # linha horizontal em y = 0 para auxiliar na visualização
+
+# independencia
+
+plot(reg3$residuals)
+
+# correlação serial 
+
+dwtest(reg3)
+
+' HO) DW=2
+  H1) DW diferente de 2
+ rejeita-se H0'
+
+# Homocedasticidade (Breusch-Pagan)
+
+bptest(reg3)
+
+' HO) variancias iguais
+  H1) há pelo menos uma diferente
+p-value < 0,05'
+
+# multicolinearidade
+
+(vi<-vif(reg3))
+mean(vi)
+
+reduced_data <- subset(banco2, select = -CAD)
+corr_matrix = round(cor(reduced_data), 2)
+ggcorrplot(corr_matrix, hc.order = TRUE, type = "lower",
+           lab = TRUE)
 
 
-
-
-
-# ############# Observações influentes #############
-# 
-# medinflu1<-influence.measures(reg1)
-# indice<-c(1:1209)
-# 
-# # Utilizando hii
-# plot(indice,hatvalues(reg1),type="l") 
-# 
-# 
-# # Betas
-# dfbetaPlots(reg1) 
-# ols_plot_dfbetas(reg1) # 843 e # 623
-# 
-# 
-# # Dffits
-# plot(indice,abs(dffits(reg1)), type = "l") 
-# 
-# # Cook
-# plot(indice,cooks.distance(reg1), type = "l")
-# plot(reg1,which=4)
-# ols_plot_cooksd_chart(reg1)
-# 
-# 
