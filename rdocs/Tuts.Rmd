@@ -67,14 +67,14 @@ ggplot(banco) +
   theme_estat()
 ggsave("CAD.pdf", width = 158, height = 93, units = "mm")
 ```
-## Medidas-resumo:
+### Medidas-resumo:
 
 ```{r}
 summari(banco$CAD)
 ```
 
 
-## Testando normalidade:
+### Testando normalidade:
 
 ```{r}
 lillie.test(banco$CAD)
@@ -261,7 +261,7 @@ ggplot(aes(x = dominios_n, y = CAD)) +
     fun = "mean", geom = "point", shape = 23, size = 3, fill = "white"
   ) +
   labs(x = "Domínios", y = "CAD") +
-  scale_x_discrete(guide = guide_axis(n.dodge = 3)) +
+  scale_x_discrete(labels = c("Chapada do Apodi" = "Chapada\n do Apodi", "Planalto da Ibiapaba" = "Planalto da\n Ibiapaba","Tabuleiros Interiores" = "Tabuleiros\n Interiores","Tabuleiros Costeiros" = "Tabuleiros\n Costeiros", "Planície Litorânea" = "Planície \nLitorânea", "Chapada do Araripe" = "Chapada do \nAraripe", "Planície Ribeirinha" = "Planície\n Ribeirinha", "Serras Úmidas" = "Serras \nÚmidas", "Serras Secas" = "Serras \nSecas"),guide = guide_axis(n.dodge = 2)) +
   theme_estat()
 ggsave("box_dominios.pdf", width = 158, height = 93, units = "mm")
 ```
@@ -303,7 +303,7 @@ ggplot(aes(x = regiao, y = CAD)) +
     fun = "mean", geom = "point", shape = 23, size = 3, fill = "white"
   ) +
   labs(x = "Região", y = "CAD") +
-  scale_x_discrete(guide = guide_axis(n.dodge = 3)) +
+  scale_x_discrete(labels = c("Centro Sul" = "Centro\n Sul", "Grande Fortaleza" = "Grande \nFortaleza","Litoral Leste" = "Litoral\n Leste","Litoral Oeste / Vale do Curu" = "Litoral\n Oeste", "Maciço de Baturité" = "Maciço de\n Baturité", "Chapada do Araripe" = "Chapada do \nAraripe", "Serra da Ibiapaba" = "Serra da\n Ibiapaba", "Sertão Central" = "Sertão \nCentral", "Sertão de Canindé" = "Sertão de\n Canindé", "Sertão de Sobral" = "Sertão de\n Sobral", "Sertão dos Crateús" = "Sertão dos\n Crateús", "Sertão dos Inhamuns" = "Sertão dos\n Inhamuns", "Vale do Jaguaribe" = "Vale do\n Jaguaribe"),guide = guide_axis(n.dodge = 2)) +
   theme_estat()
 ggsave("box_regiao.pdf", width = 158, height = 93, units = "mm")
 ```
