@@ -79,7 +79,7 @@ as variáveis que têm correlações mais semelhantes entre si serão agrupadas 
 
 ############### modelo inicial ###############
 
-reg1 <- lm(data = banco, CAD^(-1) ~  ALTITUDE + PROFUND  + SILTE + ARGILA + AREIA_GROS + AREIA_FINA + DENSIDADE)
+reg1 <- lm(data = banco, CAD ~  CC + PMP + ALTITUDE + PROFUND  + SILTE + ARGILA + AREIA_GROS + AREIA_FINA + DENSIDADE)
 
 summary(reg1) 
 
