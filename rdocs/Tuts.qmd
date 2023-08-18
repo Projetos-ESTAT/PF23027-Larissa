@@ -340,7 +340,8 @@ ggplot(aes(x = MESO, y = CAD)) +
     fun = "mean", geom = "point", shape = 23, size = 3, fill = "white"
   ) +
   labs(x = "Mesorregião", y = "CAD") +
-  scale_x_discrete(guide = guide_axis(n.dodge = 2)) +
+  scale_x_discrete(labels = c("Centro-Sul Cearense" = "Centro-Sul \nCearense","Noroeste Cearense" = "Noroeste\n Cearense","Região Metropolitana de 
+  Fortaleza" = "Região Metropolitana\n de Fortaleza"), guide = guide_axis(n.dodge = 2))+
   theme_estat()
 ggsave("box_mesorregiao.pdf", width = 158, height = 93, units = "mm")
 ```
