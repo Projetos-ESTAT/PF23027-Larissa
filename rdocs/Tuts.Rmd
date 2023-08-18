@@ -1,0 +1,423 @@
+---
+title: "es"
+output: html_document
+date: '2023-08-14'
+---
+
+```{r, include=FALSE}
+library("tidyverse")
+library("dplyr")
+library("openxlsx")
+library("nortest")
+library("FSA")
+```
+
+```{r, echo=FALSE}
+cores_estat <- c('#A11D21','#003366', '#CC9900', '#663333','#FF6600','#CC9966','#999966','#006606','#008091', '#041835','#666666')
+```
+
+```{r}
+theme_estat <- function (...) {
+theme <- ggplot2::theme_bw() +
+ggplot2::theme(
+axis.title.y = ggplot2:: element_text(colour = "black",
+size = 12),
+axis.title.x = ggplot2:: element_text(colour = "black",
+size = 12),
+axis.text = ggplot2:: element_text(colour = "black", size
+= 9.5),
+panel.border = ggplot2:: element_blank() ,
+axis.line = ggplot2:: element_line(colour = "black"),
+legend.position = "top",
+...
+)
+return (
+list(
+theme,
+scale_fill_manual(values = cores_estat ),
+scale_colour_manual(values = cores_estat )
+)
+)
+}
+```
+
+## Carregando o banco:
+
+```{r}
+banco <- read.xlsx("CAD_Larissa.xlsx")
+```
+
+### Criando função:
+
+```{r}
+summari <- function(x) {
+result <- c(summary(x), "desvio padrão" = sd(x)) 
+return(result)
+}
+```
+
+# Análises:
+
+
+```{r}
+ggplot(banco) +
+  aes(x = CAD) +
+  geom_histogram(colour = "white", fill = "#A11D21", binwidth = 7) +
+  labs(x = "CAD", y = "Frequência Absoluta") +
+  theme_estat()
+ggsave("CAD.pdf", width = 158, height = 93, units = "mm")
+```
+## Medidas-resumo:
+
+```{r}
+summari(banco$CAD)
+```
+
+
+## Testando normalidade:
+
+```{r}
+lillie.test(banco$CAD)
+```
+
+```{r}
+shapiro.test(banco$CAD)
+```
+
+## Drenagem:
+
+### Teste de Associação:
+
+```{r}
+cor.test(banco$CAD, banco$DRENAGEM, method = "spearman", exact = F)
+```
+
+### Teste de comparação de médias:
+
+```{r}
+kruskal.test(CAD ~ DRENAGEM, data = banco)
+```
+
+### Boxplot:
+
+```{r}
+banco %>% 
+ggplot(aes(x = as.factor(DRENAGEM), y = CAD)) +
+  geom_boxplot(fill = c("#A11D21"), width = 0.5) +
+  stat_summary(
+    fun = "mean", geom = "point", shape = 23, size = 3, fill = "white"
+  ) +
+  labs(x = "Drenagem", y = "CAD") +
+  scale_x_discrete(labels = c("1" = "Excessivamente \ndrenado", "2" = "Fortemente \ndrenado", "3" = "Acentuadamente \ndrenado", "4" = "Bem \ndrenado", "5" = "Moderadamente \ndrenado", "6" = "Imperfeitamente \ndrenado", "7" = "Mal \ndrenado", "8" = "Muito mal \ndrenado"), guide = guide_axis(n.dodge = 2)) +
+  theme_estat()
+ggsave("box_drenagem.pdf", width = 158, height = 93, units = "mm")
+```
+
+### Medidas-resumo
+
+```{r}
+tapply(banco$CAD, banco$DRENAGEM, summari)
+```
+
+
+## Declividade
+
+### Boxplot:
+
+```{r}
+banco %>%
+ggplot(aes(x = as.factor(DECLIVID), y = CAD)) +
+  geom_boxplot(fill = c("#A11D21"), width = 0.5) +
+  stat_summary(
+    fun = "mean", geom = "point", shape = 23, size = 3, fill = "white"
+  ) +
+  scale_x_discrete(labels = c("1" = "Plano", "2" = "Suave ondulado", "3" = "Ondulado", "4" = "Forte ondulado", "5" = "Montanhoso", "6" = "Escarpado")) +
+  labs(x = "Declividade", y = "CAD") +
+  theme_estat()
+ggsave("box_declividade.pdf", width = 158, height = 93, units = "mm")
+```
+### Medidas-resumo
+
+```{r}
+tapply(banco$CAD, banco$DECLIVID, summari)
+```
+
+### Teste de Associação:
+
+```{r}
+cor.test(banco$CAD, banco$DECLIVID, method = "spearman", exact = F)
+```
+
+### Teste de comparação de médias:
+
+```{r}
+kruskal.test(CAD ~ DECLIVID, data = banco)
+```
+
+### Post Hoc:
+
+```{r}
+dunnTest(CAD ~ as.factor(DECLIVID), data = banco)$res %>%
+filter(P.adj < 0.05)
+```
+
+
+## Classe
+
+### Boxplot:
+
+```{r}
+banco %>%
+ggplot(aes(x = CLASSE, y = CAD)) +
+  geom_boxplot(fill = c("#A11D21"), width = 0.5) +
+  stat_summary(
+    fun = "mean", geom = "point", shape = 23, size = 3, fill = "white"
+  ) +
+  labs(x = "Classe", y = "CAD") + 
+  scale_x_discrete(guide = guide_axis(n.dodge = 3)) +
+  theme_estat()
+ggsave("box_classe.pdf", width = 158, height = 93, units = "mm")
+```
+
+### Medidas-resumo
+
+```{r}
+tapply(banco$CAD, banco$CLASSE, summari)
+```
+
+
+### Coeficiente de Determinação:
+
+```{r}
+summary(lm(CAD ~ CLASSE, data = banco))$r.squared
+```
+
+### Teste de comparação de médias:
+
+```{r}
+kruskal.test(CAD ~ CLASSE, data = banco)
+```
+
+### Post Hoc
+
+```{r}
+dunnTest(CAD ~ CLASSE, data = banco)$res %>%
+filter(P.adj < 0.05)
+```
+
+
+## Subclasse
+
+### Boxplot:
+
+```{r}
+banco %>%
+ggplot(aes(x = SUBCLASSE, y = CAD)) +
+  geom_boxplot(fill = c("#A11D21"), width = 0.5) +
+  stat_summary(
+    fun = "mean", geom = "point", shape = 23, size = 3, fill = "white"
+  ) +
+  labs(x = "Subclasse", y = "CAD") +
+  scale_x_discrete(guide = guide_axis(n.dodge = 5)) +
+  theme_estat()
+ggsave("box_subclasse.pdf", width = 158, height = 93, units = "mm")
+```
+
+### Medidas-resumo
+
+```{r}
+tapply(banco$CAD, banco$SUBCLASSE, summari)
+```
+
+### Coeficiente de Determinação:
+
+```{r}
+summary(lm(CAD ~ SUBCLASSE, data = banco))$r.squared
+```
+
+### Teste de comparação de médias:
+
+```{r}
+kruskal.test(CAD ~ SUBCLASSE, data = banco)
+```
+
+### Post Hoc
+
+```{r}
+dunnTest(CAD ~ SUBCLASSE, data = banco)$res %>%
+filter(P.adj < 0.05)
+```
+
+
+## Domínios
+
+### Boxplot:
+
+```{r}
+banco %>%
+ggplot(aes(x = dominios_n, y = CAD)) +
+  geom_boxplot(fill = c("#A11D21"), width = 0.5) +
+  stat_summary(
+    fun = "mean", geom = "point", shape = 23, size = 3, fill = "white"
+  ) +
+  labs(x = "Domínios", y = "CAD") +
+  scale_x_discrete(guide = guide_axis(n.dodge = 3)) +
+  theme_estat()
+ggsave("box_dominios.pdf", width = 158, height = 93, units = "mm")
+```
+### Medidas-resumo
+
+```{r}
+tapply(banco$CAD, banco$dominios_n, summari)
+```
+
+### Coeficiente de Determinação:
+
+```{r}
+summary(lm(CAD ~ dominios_n, data = banco))$r.squared
+```
+
+### Teste de comparação de médias:
+
+```{r}
+kruskal.test(CAD ~ dominios_n, data = banco)
+```
+
+### Post Hoc
+
+```{r}
+dunnTest(CAD ~ dominios_n, data = banco)$res %>%
+filter(P.adj < 0.05)
+```
+
+
+## Regiões
+
+### Boxplot:
+
+```{r}
+banco %>%
+ggplot(aes(x = regiao, y = CAD)) +
+  geom_boxplot(fill = c("#A11D21"), width = 0.5) +
+  stat_summary(
+    fun = "mean", geom = "point", shape = 23, size = 3, fill = "white"
+  ) +
+  labs(x = "Região", y = "CAD") +
+  scale_x_discrete(guide = guide_axis(n.dodge = 3)) +
+  theme_estat()
+ggsave("box_regiao.pdf", width = 158, height = 93, units = "mm")
+```
+
+### Medidas-resumo
+
+```{r}
+tapply(banco$CAD, banco$regiao, summari)
+```
+
+### Coeficiente de Determinação:
+
+```{r}
+summary(lm(CAD ~ regiao, data = banco))$r.squared
+```
+
+### Teste de comparação de médias:
+
+```{r}
+kruskal.test(CAD ~ regiao, data = banco)
+```
+
+### Post Hoc
+
+```{r}
+dunnTest(CAD ~ regiao, data = banco)$res %>%
+filter(P.adj < 0.05)
+```
+
+
+## Mesorregião
+
+### Boxplot:
+
+```{r}
+banco %>%
+ggplot(aes(x = MESO, y = CAD)) +
+  geom_boxplot(fill = c("#A11D21"), width = 0.5) +
+  stat_summary(
+    fun = "mean", geom = "point", shape = 23, size = 3, fill = "white"
+  ) +
+  labs(x = "Mesorregião", y = "CAD") +
+  scale_x_discrete(labels = c("Centro-Sul Cearense" = "Centro-Sul \nCearense","Noroeste Cearense" = "Noroeste\n Cearense","Região Metropolitana de Fortaleza" = "Região Metropolitana\n de Fortaleza"), guide = guide_axis(n.dodge = 2))+
+  theme_estat()
+ggsave("box_mesorregiao.pdf", width = 158, height = 93, units = "mm")
+```
+
+### Medidas-resumo
+
+```{r}
+tapply(banco$CAD, banco$MESO, summari)
+```
+
+### Coeficiente de Determinação:
+
+```{r}
+summary(lm(CAD ~ MESO, data = banco))$r.squared
+```
+
+### Teste de Comparação de Médias:
+
+```{r}
+kruskal.test(CAD ~ MESO, data = banco)
+```
+
+### Post Hoc
+
+```{r}
+dunnTest(CAD ~ MESO, data = banco)$res %>%
+filter(P.adj < 0.05)
+```
+
+
+## Município
+
+### Boxplot:
+
+```{r}
+banco %>%
+ggplot(aes(x = Municipio, y = CAD)) +
+  geom_boxplot(fill = c("#A11D21"), width = 0.5) +
+  stat_summary(
+    fun = "mean", geom = "point", shape = 23, size = 3, fill = "white"
+  ) +
+  labs(x = "Municípios", y = "CAD") +
+  scale_x_discrete(guide = guide_axis(n.dodge = 10)) +
+  theme_estat()
+ggsave("box_municipios.pdf", width = 158, height = 93, units = "mm")
+```
+
+### Medidas-resumo
+
+```{r}
+tapply(banco$CAD, banco$Municipio, summari)
+```
+
+### Coeficiente de Determinação:
+
+```{r}
+summary(lm(CAD ~ Municipio, data = banco))$r.squared
+```
+
+### Teste de comparação de médias:
+
+```{r}
+kruskal.test(CAD ~ Municipio, data = banco)
+```
+
+### Post Hoc
+
+```{r}
+dunnTest(CAD ~ Municipio, data = banco)$res %>%
+filter(P.adj < 0.05)
+```
+
+```
+
