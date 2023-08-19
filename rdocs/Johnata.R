@@ -11,7 +11,7 @@ source("rdocs/source/packages.R")
 #  
 #         Consultoria estatística 
 #
-
+#
 # ---------------------------------------------------------------------------- #
 # ############################## README ###################################### #
 # Consultor, favor utilizar este arquivo .R para realizar TODAS as análises
