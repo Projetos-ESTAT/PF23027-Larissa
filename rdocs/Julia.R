@@ -60,10 +60,35 @@ correlação<-as.data.frame(cor(banco1))
   CAD e PMP -> 0,84
   CC E PMP ->  0,97 '
 
+' 1)A escala de medição deve ser uma escala ou relação de intervalo;
+  2)As variáveis devem ser aproximadamente distribuídas;
+  3)A associação deve ser linear; NÃO OK
+  4)Não deve haver valores atípicos nos dados.
+
+É necessário que as duas variáveis sejam medidas em um nível quantitativo contínuo.OK
+A distribuição das variáveis deve ser semelhante à curva normal. NÃO OK'
+
+plot(banco1)
+
+' relação linear só entre CC e PMP e elas com relação a CAD '
+
+hist(banco1$CAD)
+hist(banco1$Altitude)
+hist(banco1$CC)
+hist(banco1$PMP)
+hist(banco1$Silte)
+hist(banco1$Profundidade)
+hist(banco1$Argila)
+hist(banco1$`Areia Fina`)
+hist(banco1$`Areia Grossa`)
+
+' nenhuma das variáveis possui uma distribuição normalizada '
+
 # correlograma
 dados <- banco1 |> 
   select(CAD, Altitude, `Areia Fina`,`Areia Grossa`, Argila,  CC, Densidade, Profundidade,PMP, Silte)
 res2 <- rcorr(as.matrix(dados))
+# res2$r
 corrplot(res2$r, type="upper", order="hclust", 
          p.mat = res2$P, sig.level = 0.05, insig = "blank")
 # correlações insignificantes (<0.05) ficam com um X 
@@ -126,22 +151,6 @@ ols_plot_cooksd_chart(reg1)
 ####################################################################################################################
 
 ############### diagnóstico inicial ###############
-
-plot(banco1)
-
-' relação linear só entre CC e PMP e elas com relação a CAD '
-
-hist(banco1$CAD)
-hist(banco1$Altitude)
-hist(banco1$CC)
-hist(banco1$PMP)
-hist(banco1$Silte)
-hist(banco1$Profundidade)
-hist(banco1$Argila)
-hist(banco1$`Areia Fina`)
-hist(banco1$`Areia Grossa`)
-
-' nenhuma das variáveis possui uma distribuição normalizada, a grande parte é assimétrica a esquerda '
 
 resíduos = reg1$residuals
 
@@ -338,7 +347,14 @@ bptest(reg3)
 
 ' HO) variancias iguais
   H1) há pelo menos uma diferente
-p-value < 0,05'
+p-value < 0,05
+
+A existência de heterocedasticidade não causa viés nos estimadores,
+embora ocasione viés nos estimadores da vairância do MQO, tornando
+não válidos os testes F e t.
+
+importante: fazer um estimador da variância robusto a heterocedasticidade é
+consistente, mas é viesado'
 
 # multicolinearidade
 
