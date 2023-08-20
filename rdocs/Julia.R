@@ -102,9 +102,18 @@ as variáveis que têm correlações mais semelhantes entre si serão agrupadas 
 
 ####################################################################################################################
 
+############### divisão ###############
+
+set.seed(123)  
+indices <- sample(1:nrow(banco1), nrow(banco1) * 0.7)  # 70% para treinamento
+
+# Crie conjuntos de treinamento e validação com base nos índices
+treinamento <- banco1[indices, ]
+validacao <- banco1[-indices, ]
+
 ############### modelo inicial ###############
 
-reg1 <- lm(data = banco, CAD ~  CC + PMP + ALTITUDE + PROFUND  + SILTE + ARGILA + AREIA_GROS + AREIA_FINA + DENSIDADE)
+reg1 <- lm(data = treinamento, CAD ~  CC + PMP + Altitude + Profundidade  + Silte + Argila +`Areia Grossa` + `Areia Fina` + Densidade)
 
 summary(reg1) 
 
@@ -113,7 +122,7 @@ summary(reg1)
 variáveis significantes: CC, PMP (ALTITUDE e PROFUNDIDADE, considerando alpha=0,05)
 Manter as demais variáveis não agrega valor ao modelo.'
 
-plot(reg1$fitted.values,banco$CAD)
+plot(reg1$fitted.values,treinamento$CAD)
 
 ' º consideranto todas as variáveis
   º uma outlier visível, reta perfeita'
@@ -121,32 +130,32 @@ plot(reg1$fitted.values,banco$CAD)
 ############# Observações influentes #############
 
 medinflu1<-influence.measures(reg1)
-indice<-c(1:1209)
+indice<-c(1:846)
 
 # Utilizando hii
 plot(indice,hatvalues(reg1),type="l")
 
-' 623 '
+'632(principalmente) '
 
 # Betas
 dfbetaPlots(reg1)
 ols_plot_dfbetas(reg1)
 
-' 843 e 623 '
+' 543(principalmente) e 632'
 
 # Dffits
 plot(indice,abs(dffits(reg1)), type = "l")
 
-' 843 '
+' 543(principalmente) '
 
 # Cook
 plot(indice,cooks.distance(reg1), type = "l")
 plot(reg1,which=4)
 ols_plot_cooksd_chart(reg1)
 
-' 623, 782, 843'
+' 484, 543 e 632(principalmente)'
 
-# banco<-banco[-843,]
+# treinamento<-treinamento[-c(632, 543),]
 
 ####################################################################################################################
 
@@ -193,14 +202,14 @@ bptest(reg1)
 
 ' HO) variancias iguais
   H1) há pelo menos uma diferente
-p-value = 0.2011 > 0,05'
+p-value = 0.2135 > 0,05'
 
 # multicolinearidade
 
 (vi<-vif(reg1))
 mean(vi)
 
-' média do VIF muito superior a 1 (7328.465)'
+' média do VIF muito superior a 1 (4963.447)'
 
 reduced_data <- subset(banco1, select = -CAD)
 corr_matrix = round(cor(reduced_data), 2)
@@ -210,15 +219,16 @@ ggcorrplot(corr_matrix, hc.order = TRUE, type = "lower",
 ' Podemos notar uma correlação forte  (valor é superior a 0,8) entre PMP e CC 
    Esse resultado faz sentido? se uma coisa for derivada da outra é possível tirar uma delas '
 
-############### transformação ###############
 
-############### novo modelo ###############
+############### novo modelo (teste) ###############
 
-reg4<- lm(data = banco, log(CAD) ~  CC + PMP)
+reg4<- lm(data = treinamento, CAD ~  CC + PMP)
 
 summary(reg4)
 
-plot(reg4$fitted.values,banco$CAD)
+plot(reg4$fitted.values,treinamento$CAD)
+
+' considerando as duas variaveis que tem linearidade (CC e PMP)'
 
 resíduos = reg4$residuals
 
@@ -247,14 +257,14 @@ dwtest(reg4)
 
 # Homocedasticidade (Breusch-Pagan)
 
-bptest(reg4)
+bptest(reg4) 
+
+' tem variancia constante'
 
 # multicolinearidade
 
 (vi<-vif(reg4))
 mean(vi)
-
-plot(reg4$fitted.values,banco$CAD)
 
 ####################################################################################################################
 
@@ -265,56 +275,19 @@ plot(reg4$fitted.values,banco$CAD)
 
 ############### criar um novo modelo retirando PMP ou CC ###############
 
-reg2 <- lm(data = banco, CAD ~ ALTITUDE + PROFUND + CC + SILTE + ARGILA + AREIA_GROS + AREIA_FINA + DENSIDADE)
+reg2 <- lm(data = treinamento, CAD ~  CC + Altitude + Profundidade  + Silte + Argila +`Areia Grossa` + `Areia Fina` + Densidade)
 
 summary(reg2)
 
-'Adjusted R-squared:  0.9102
+'Adjusted R-squared:  0.9083 (cai muito, de 99% pra 90%)
  variáveis significantes: CC, ALTITUDE, PROFUNDIDADE e DENSIDADE
 Manter as demais variáveis não agrega valor ao modelo.'
 
-plot(reg2$fitted.values,banco$CAD)
+plot(reg2$fitted.values,treinamento$CAD)
 
-' comparando os modelos:
- H0 ) a variável removida não têm significância
- H1 ) a variável é significante' 
+resíduos = reg2$residuals
 
-anova(reg1,reg2)
-
-' para ambas as retiradas, o valor p é muito pequeno (menor que 0,05), portanto rejeitamos a hipótese nula, 
-  significando que o segundo modelo não é uma melhoria do primeiro. '
-
-############### agrupamento de variaveis por PCA ###############
-
-' agrupamento das variáveis multicolineares, por meio de técnicas de redução, como Análise de Componentes Principais '
-
-dados<-select(banco, CC, PMP)
-padronizados <- scale(dados)
-pca <- prcomp(padronizados)
-# componentes principais: pca$x
-# pca$sdev^2 / sum(pca$sdev^2)
-summary(pca)
-PCA<- pca$x[, 1]
-
-'0.98717986 0.01282014
-uma componente é suficiente'
-
-banco$PCA <- PCA
-banco1$PCA <- PCA
-
-'a primeira componente principal foi extraída e representa uma combinação linear de CC e PMP 
-que captura a maior parte da variância dos dados, usada como uma nova variável não correlacionada'
-
-banco2 <- banco1[, !colnames(banco1) %in% c("CC", "PMP")]
-
-reg3 <- lm(data = banco, CAD ~ ALTITUDE + PROFUND + PCA + SILTE + ARGILA + AREIA_GROS + AREIA_FINA + DENSIDADE)
-
-summary(reg3)
-
-########## pressupostos ##########
-
-resíduos = reg3$residuals
-
+# histograma dos resíduos
 hist(resíduos)
 
 # normalidade 
@@ -324,47 +297,215 @@ qqline(resíduos)
 shapiro.test(resíduos)
 ols_test_normality(resíduos)
 
+
+' os dados não seguem distribuição normal e a regressão pode sofrer muita interferência da 
+assimetria dos dados quando construídos sobre conjuntos que não possuam a distribuição normal.
+
+º transformação dos dados '
+
 # linearidade
 
-plot(reg3$fitted.values, reg3$residuals, xlab = "Valores Ajustados", ylab = "Resíduos")
+plot(reg2$fitted.values, reg2$residuals, xlab = "Valores Ajustados", ylab = "Resíduos")
 abline(h = 0, col = "red")  # linha horizontal em y = 0 para auxiliar na visualização
+
+' num modelo de regressão linear ideal, os pontos devem estar 
+dispersos aleatoriamente em torno da linha horizontal em y = 0, pontos distantes indicam outliers'
 
 # independencia
 
-plot(reg3$residuals)
+plot(reg2$residuals)
+
+' media em torno de zero '
 
 # correlação serial 
 
-dwtest(reg3)
+dwtest(reg1)
 
 ' HO) DW=2
-  H1) DW diferente de 2
- rejeita-se H0'
+  H1) DW diferente de 2'
 
 # Homocedasticidade (Breusch-Pagan)
 
-bptest(reg3)
+bptest(reg1)
 
 ' HO) variancias iguais
-  H1) há pelo menos uma diferente
-p-value < 0,05
-
-A existência de heterocedasticidade não causa viés nos estimadores,
-embora ocasione viés nos estimadores da vairância do MQO, tornando
-não válidos os testes F e t.
-
-importante: fazer um estimador da variância robusto a heterocedasticidade é
-consistente, mas é viesado'
+  H1) há pelo menos uma diferente'
 
 # multicolinearidade
 
-(vi<-vif(reg3))
+(vi<-vif(reg2))
 mean(vi)
 
-reduced_data <- subset(banco2, select = -CAD)
+reduced_data <- subset(treinamento, select = -c(CAD,PMP))
 corr_matrix = round(cor(reduced_data), 2)
 ggcorrplot(corr_matrix, hc.order = TRUE, type = "lower",
            lab = TRUE)
+
+############### transformação ###############
+
+reg2_1 <- lm(data = treinamento, log(CAD) ~  CC + Altitude + Profundidade  + Silte + Argila +`Areia Grossa` + `Areia Fina` + Densidade)
+
+summary(reg2_1)
+
+plot(reg2_1$fitted.values,treinamento$CAD)
+
+resíduos = reg2_1$residuals
+hist(resíduos)
+qqnorm(resíduos)
+qqline(resíduos)
+shapiro.test(resíduos)
+ols_test_normality(resíduos)
+
+plot(reg2_1$fitted.values, reg2_1$residuals, xlab = "Valores Ajustados", ylab = "Resíduos")
+abline(h = 0, col = "red")  # linha horizontal em y = 0 para auxiliar na visualização
+
+plot(reg2_1$residuals)
+
+dwtest(reg2_1)
+
+bptest(reg2_1)
+
+(vi<-vif(reg2_1))
+mean(vi)
+
+' a homocedasticidade nao foi atendida e os residuos formam como se fosse uma parabola '
+
+############ 
+
+reg2_2 <- lm(data = treinamento, CAD*(-1) ~  CC + Altitude + Profundidade  + Silte + Argila +`Areia Grossa` + `Areia Fina` + Densidade)
+
+summary(reg2_2)
+
+plot(reg2_2$fitted.values,treinamento$CAD)
+
+resíduos = reg2_2$residuals
+hist(resíduos)
+qqnorm(resíduos)
+qqline(resíduos)
+shapiro.test(resíduos)
+ols_test_normality(resíduos)
+
+plot(reg2_2$fitted.values, reg2_2$residuals, xlab = "Valores Ajustados", ylab = "Resíduos")
+abline(h = 0, col = "red")  # linha horizontal em y = 0 para auxiliar na visualização
+
+plot(reg2_2$residuals)
+
+dwtest(reg2_2)
+
+bptest(reg2_2)
+
+(vi<-vif(reg2_2))
+mean(vi)
+
+############ 
+
+reg2_3 <- lm(data = treinamento, sqrt(CAD) ~  CC + Altitude + Profundidade  + Silte + Argila +`Areia Grossa` + `Areia Fina` + Densidade)
+
+summary(reg2_3)
+
+plot(reg2_3$fitted.values,treinamento$CAD)
+
+resíduos = reg2_3$residuals
+hist(resíduos)
+qqnorm(resíduos)
+qqline(resíduos)
+shapiro.test(resíduos)
+ols_test_normality(resíduos)
+
+' nenhuma transformação resolve o problema da normalidade '
+
+
+# ' comparando os modelos:
+#  H0 ) a variável removida não têm significância
+#  H1 ) a variável é significante' 
+# 
+# anova(reg1,reg2)
+# 
+# ' para ambas as retiradas, o valor p é muito pequeno (menor que 0,05), portanto rejeitamos a hipótese nula, 
+#   significando que o segundo modelo não é uma melhoria do primeiro. '
+
+
+# ############### agrupamento de variaveis por PCA ###############
+# 
+# ' agrupamento das variáveis multicolineares, por meio de técnicas de redução, como Análise de Componentes Principais '
+# 
+# dados<-select(banco, CC, PMP)
+# padronizados <- scale(dados)
+# pca <- prcomp(padronizados)
+# # componentes principais: pca$x
+# # pca$sdev^2 / sum(pca$sdev^2)
+# summary(pca)
+# PCA<- pca$x[, 1]
+# 
+# '0.98717986 0.01282014
+# uma componente é suficiente'
+# 
+# banco$PCA <- PCA
+# banco1$PCA <- PCA
+# 
+# 'a primeira componente principal foi extraída e representa uma combinação linear de CC e PMP 
+# que captura a maior parte da variância dos dados, usada como uma nova variável não correlacionada'
+# 
+# banco2 <- banco1[, !colnames(banco1) %in% c("CC", "PMP")]
+# 
+# reg3 <- lm(data = banco, CAD ~ ALTITUDE + PROFUND + PCA + SILTE + ARGILA + AREIA_GROS + AREIA_FINA + DENSIDADE)
+# 
+# summary(reg3)
+# 
+# ########## pressupostos ##########
+# 
+# resíduos = reg3$residuals
+# 
+# hist(resíduos)
+# 
+# # normalidade 
+# 
+# qqnorm(resíduos)
+# qqline(resíduos)
+# shapiro.test(resíduos)
+# ols_test_normality(resíduos)
+# 
+# # linearidade
+# 
+# plot(reg3$fitted.values, reg3$residuals, xlab = "Valores Ajustados", ylab = "Resíduos")
+# abline(h = 0, col = "red")  # linha horizontal em y = 0 para auxiliar na visualização
+# 
+# # independencia
+# 
+# plot(reg3$residuals)
+# 
+# # correlação serial 
+# 
+# dwtest(reg3)
+# 
+# ' HO) DW=2
+#   H1) DW diferente de 2
+#  rejeita-se H0'
+# 
+# # Homocedasticidade (Breusch-Pagan)
+# 
+# bptest(reg3)
+# 
+# ' HO) variancias iguais
+#   H1) há pelo menos uma diferente
+# p-value < 0,05
+# 
+# A existência de heterocedasticidade não causa viés nos estimadores,
+# embora ocasione viés nos estimadores da vairância do MQO, tornando
+# não válidos os testes F e t.
+# 
+# importante: fazer um estimador da variância robusto a heterocedasticidade é
+# consistente, mas é viesado'
+# 
+# # multicolinearidade
+# 
+# (vi<-vif(reg3))
+# mean(vi)
+# 
+# reduced_data <- subset(banco2, select = -CAD)
+# corr_matrix = round(cor(reduced_data), 2)
+# ggcorrplot(corr_matrix, hc.order = TRUE, type = "lower",
+#            lab = TRUE)
 
 # # estimating the variance of y for different values of x
 # variance = lm(abs(regStep$residuals) ~ regStep$fitted.values)$fitted.values^2
