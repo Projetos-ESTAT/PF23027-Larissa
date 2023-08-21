@@ -54,7 +54,7 @@ banco1<-banco%>%
   select(CAD, Altitude = ALTITUDE, `Areia Fina`= AREIA_FINA,`Areia Grossa`=AREIA_GROS, Argila=ARGILA, CC,  Densidade=DENSIDADE, Profundidade = PROFUND, PMP,  Silte=SILTE)
 
 # matriz de correlações
-correlação<-as.data.frame(cor(banco1))
+correlação<-as.data.frame(cor(banco1, method = "spearman"))
 
 ' CAD e CC -> 0,94
   CAD e PMP -> 0,84
@@ -67,6 +67,8 @@ correlação<-as.data.frame(cor(banco1))
 
 É necessário que as duas variáveis sejam medidas em um nível quantitativo contínuo.OK
 A distribuição das variáveis deve ser semelhante à curva normal. NÃO OK'
+
+' refazer para SPEARMAN '
 
 plot(banco1)
 
@@ -87,7 +89,7 @@ hist(banco1$`Areia Grossa`)
 # correlograma
 dados <- banco1 |> 
   select(CAD, Altitude, `Areia Fina`,`Areia Grossa`, Argila,  CC, Densidade, Profundidade,PMP, Silte)
-res2 <- rcorr(as.matrix(dados))
+res2 <- rcorr(as.matrix(dados), type = "spearman")
 # res2$r
 corrplot(res2$r, type="upper", order="hclust", 
          p.mat = res2$P, sig.level = 0.05, insig = "blank")
