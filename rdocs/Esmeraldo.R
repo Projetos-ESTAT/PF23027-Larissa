@@ -31,7 +31,7 @@ setwd("C:/Users/daviz/Downloads/ESTAT/Larissa-neris")
 
 # Leitura de dados
 
-pacman::p_load(readxl,tidyverse,dplyr,tidyr,plotly,readxl,ggplot2,factoextra,ggrepel,cluster)
+pacman::p_load(readxl,writexl,tidyverse,dplyr,tidyr,plotly,readxl,ggplot2,factoextra,ggrepel,cluster)
 
 # Tratamento de dados
 
@@ -159,3 +159,8 @@ fviz_cluster(km.res, data=matrix2,
              xlab = NULL, ylab = NULL,
              ggtheme=theme_estat())
 ggsave("clust.pdf", width = 158, height = 93, units = "mm")
+
+dados_novos <- cbind(dados, cluster=km.res$cluster)
+write_xlsx(dados_novos, path = 'banco/banco_clusters.xlsx')
+
+
