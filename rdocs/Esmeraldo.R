@@ -31,7 +31,7 @@ setwd("C:/Users/daviz/Downloads/ESTAT/Larissa-neris")
 
 # Leitura de dados
 
-pacman::p_load(readxl,writexl,tidyverse,dplyr,tidyr,plotly,readxl,ggplot2,factoextra,ggrepel,cluster)
+pacman::p_load(readxl,tidyverse,dplyr,tidyr,plotly,readxl,ggplot2,factoextra,ggrepel,cluster)
 
 # Tratamento de dados
 
@@ -144,7 +144,7 @@ ggsave("elbow.pdf", width = 158, height = 93, units = "mm")
 
 # Indicativo de 4 clusters
 
-set.seed(202017844)
+set.seed(2020178)
 km.res <- kmeans(dados_quant_padron, 4, nstart=25)
 
 aggregate(dados_quant_padron, by=list(cluster=km.res$cluster), mean)
@@ -157,10 +157,7 @@ fviz_cluster(km.res, data=matrix2,
              repel=TRUE,
              main = "Clusters",
              xlab = NULL, ylab = NULL,
-             ggtheme=theme_estat())
+             ggtheme=theme_estat(),
+             geom = "point" )
 ggsave("clust.pdf", width = 158, height = 93, units = "mm")
-
-dados_novos <- cbind(dados, cluster=km.res$cluster)
-write_xlsx(dados_novos, path = 'banco/banco_clusters.xlsx')
-
 
