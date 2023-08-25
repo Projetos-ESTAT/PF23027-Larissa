@@ -87,15 +87,32 @@ hist(banco1$`Areia Grossa`)
 ' nenhuma das variáveis possui uma distribuição normalizada '
 
 # correlograma
-dados <- banco1 |> 
-  select(CAD, Altitude, `Areia Fina`,`Areia Grossa`, Argila,  CC, Densidade, Profundidade,PMP, Silte)
-res2 <- rcorr(as.matrix(dados), type = "spearman")
-# res2$r
-corrplot(res2$r, type="upper", order="hclust", 
-         p.mat = res2$P, sig.level = 0.05, insig = "blank")
-# correlações insignificantes (<0.05) ficam com um X 
-corrplot(res2$r, type="upper", order="hclust", 
-         p.mat = res2$P, sig.level = 0.05)
+# dados <- banco1 |> 
+#   select(CAD, Altitude, `Areia Fina`,`Areia Grossa`, Argila,  CC, Densidade, Profundidade,PMP, Silte)
+# res2 <- rcorr(as.matrix(dados), type = "spearman")
+# # res2$r
+# corrplot(res2$r, type="upper", order="hclust", 
+#          p.mat = res2$P, sig.level = 0.05, insig = "blank")
+# # correlações insignificantes (<0.05) ficam com um X 
+# corrplot(res2$r, type="upper", order="hclust", 
+#          p.mat = res2$P, sig.level = 0.05)
+
+cor <- cor(banco1, method = "spearman")
+cor_melt <- melt(round(cor, digits = 2))
+ggplot(data = cor_melt, aes(x = Var1, y = Var2, fill=value))+
+  geom_tile(color = "white") +
+  scale_fill_gradient2(low = "#003366", high = "#A11D21", mid = "white",
+                       midpoint = 0, limit = c(-1,1), space = "Lab",
+                       name = "Correlação") +
+  geom_text(aes(Var2, Var1, label = value), color = 'black', size = 1.8) +
+  theme_minimal()+
+  guides(fill = guide_colourbar(barwidth = 0.5,
+                                barheight = 10)) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, size=7),
+        axis.text.y = element_text(size=7),
+        axis.title.x = element_blank(),
+        axis.title.y = element_blank()) +
+  coord_fixed()
 #ggsave(filename = file.path(caminho,"correlograma.png"), width = 158, height = 93, units = "mm") 
 #ggsave(filename = file.path(caminho,"correlograma.pdf"), width = 158, height = 93, units = "mm")
 
@@ -106,6 +123,10 @@ as variáveis que têm correlações mais semelhantes entre si serão agrupadas 
 
 ############### divisão ###############
 
+banco1<-cbind(banco1,banco$dominios_n, banco$MESO)
+colnames(banco1)[11:12] <- c("Domínios", "Mesorregião")
+banco1<-banco1[,-c(13:14)]
+
 set.seed(123)  
 indices <- sample(1:nrow(banco1), nrow(banco1) * 0.7)  # 70% para treinamento
 
@@ -113,16 +134,31 @@ indices <- sample(1:nrow(banco1), nrow(banco1) * 0.7)  # 70% para treinamento
 treinamento <- banco1[indices, ]
 validacao <- banco1[-indices, ]
 
+############### variáveis qualitativas ###############
+
+#table(banco$Municipio)
+table(banco$regiao)
+table(banco$MESO) # 7
+table(banco$dominios_n) # 10
+
+treinamento$Domínios <- factor(treinamento$Domínios)
+treinamento$Mesorregião <- factor(treinamento$Mesorregião)
+treinamento$Região <- factor(treinamento$Região)
+
+# int1<-lm(data=treinamento, CAD ~ Mesorregião*Altitude)
+# summary(int1)
+
 ############### modelo inicial ###############
 
-reg1 <- lm(data = treinamento, CAD ~  CC + PMP + Altitude + Profundidade  + Silte + Argila +`Areia Grossa` + `Areia Fina` + Densidade)
+reg1 <- lm(data = treinamento, CAD ~  Mesorregião + Domínios + CC  + Altitude + Profundidade  + Silte + Argila +`Areia Grossa` + `Areia Fina` + Densidade)
 
 summary(reg1) 
 
-' Adjusted R-squared:  0.9978 
+' Adjusted R-squared:  0.9968 
 
-variáveis significantes: CC, PMP (ALTITUDE e PROFUNDIDADE, considerando alpha=0,05)
-Manter as demais variáveis não agrega valor ao modelo.'
+variáveis significantes: CC, PMP, DomíniosPlanalto da Ibiapaba, Profundidade, considerando alpha=0,05
+Manter as demais variáveis não agrega valor ao modelo.
+aparecem 8 domínios (chapado do apodi e planície litorânea (1 observação)) e 6 mesorregiões(centro-sul cearaense)'
 
 plot(reg1$fitted.values,treinamento$CAD)
 
@@ -131,34 +167,34 @@ plot(reg1$fitted.values,treinamento$CAD)
 
 ############# Observações influentes #############
 
+## observações com valor-p menor que 5% são suspeitas
+outlierTest(reg1) # obs 843
+
 medinflu1<-influence.measures(reg1)
 indice<-c(1:846)
 
 # Utilizando hii
 plot(indice,hatvalues(reg1),type="l")
 
-'632(principalmente) '
 
 # Betas
 dfbetaPlots(reg1)
 ols_plot_dfbetas(reg1)
 
-' 543(principalmente) e 632'
 
 # Dffits
 plot(indice,abs(dffits(reg1)), type = "l")
 
-' 543(principalmente) '
 
 # Cook
 plot(indice,cooks.distance(reg1), type = "l")
 plot(reg1,which=4)
 ols_plot_cooksd_chart(reg1)
+' 543 '
 
-' 484, 543 e 632(principalmente)'
+' 389, 106 e 843 (principalmente)'
 
-# treinamento<-treinamento[-c(632, 543),]
-# treinamento<-treinamento[-c(632),]
+# treinamento<-treinamento[-c(),]
 
 ####################################################################################################################
 
@@ -175,6 +211,8 @@ qqnorm(resíduos)
 qqline(resíduos)
 shapiro.test(resíduos)
 ols_test_normality(resíduos)
+# avaliação da aderência da premissa de normalidade
+qqPlot(reg1, main="QQ Plot")  
 
 
 ' os dados não seguem distribuição normal e a regressão pode sofrer muita interferência da 
@@ -205,14 +243,14 @@ bptest(reg1)
 
 ' HO) variancias iguais
   H1) há pelo menos uma diferente
-p-value = 0.2135 > 0,05'
+p-value =0.1094 > 0,05'
 
 # multicolinearidade
 
 (vi<-vif(reg1))
 mean(vi)
 
-' média do VIF muito superior a 1 (4963.447)'
+' média do VIF muito superior a 1 (1379.761)'
 
 reduced_data <- subset(banco1, select = -CAD)
 corr_matrix = round(cor(reduced_data), 2)
@@ -221,53 +259,6 @@ ggcorrplot(corr_matrix, hc.order = TRUE, type = "lower",
 
 ' Podemos notar uma correlação forte  (valor é superior a 0,8) entre PMP e CC 
    Esse resultado faz sentido? se uma coisa for derivada da outra é possível tirar uma delas '
-
-
-############### novo modelo (teste) ###############
-
-reg4<- lm(data = treinamento, CAD ~  CC + PMP)
-
-summary(reg4)
-
-plot(reg4$fitted.values,treinamento$CAD)
-
-' considerando as duas variaveis que tem linearidade (CC e PMP)'
-
-resíduos = reg4$residuals
-
-# histograma dos resíduos
-hist(resíduos)
-
-# normalidade 
-
-qqnorm(resíduos)
-qqline(resíduos)
-shapiro.test(resíduos)
-ols_test_normality(resíduos)
-
-# linearidade
-
-plot(reg1$fitted.values, reg1$residuals, xlab = "Valores Ajustados", ylab = "Resíduos")
-abline(h = 0, col = "red")  # linha horizontal em y = 0 para auxiliar na visualização
-
-# independencia
-
-plot(reg4$residuals)
-
-# correlação serial 
-
-dwtest(reg4)
-
-# Homocedasticidade (Breusch-Pagan)
-
-bptest(reg4) 
-
-' tem variancia constante'
-
-# multicolinearidade
-
-(vi<-vif(reg4))
-mean(vi)
 
 ####################################################################################################################
 
@@ -278,12 +269,13 @@ mean(vi)
 
 ############### criar um novo modelo retirando PMP ou CC ###############
 
-reg2 <- lm(data = treinamento, CAD ~  CC + Altitude + Profundidade  + Silte + Argila +`Areia Grossa` + `Areia Fina` + Densidade)
+reg2 <- lm(data = treinamento, CAD ~  Mesorregião + CC + Altitude + Profundidade  + Silte + Argila + `Areia Grossa` + `Areia Fina` + Densidade)
 
 summary(reg2)
 
-'Adjusted R-squared:  0.9083 (cai muito, de 99% pra 90%)
- variáveis significantes: CC, ALTITUDE, PROFUNDIDADE e DENSIDADE
+'Adjusted R-squared:  0.9125
+ variáveis significantes: CC, MesorregiãoSul Cearense, MesorregiãoNorte Cearense, 
+ MesorregiãoNoroeste Cearense, MesorregiãoJaguaribe, DomíniosSerras Secas 
 Manter as demais variáveis não agrega valor ao modelo.'
 
 plot(reg2$fitted.values,treinamento$CAD)
