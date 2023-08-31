@@ -1,28 +1,3 @@
-source("rdocs/source/packages.R")
-
-# ---------------------------------------------------------------------------- #
-
-#        ______   _____  ________      ________ 
-#      |  ____| / ____| |__   __| /\  |__   __|
-#     | |__    | (___     | |   /  \    | |   
-#    |  __|    \___ \    | |  / /\ \   | |   
-#   | |____   ____) |   | |  /____ \  | |   
-#  |______   |_____/   |_| /_/    \_\|_|   
-#  
-#         Consultoria estatística 
-#
-
-# ---------------------------------------------------------------------------- #
-# ############################## README ###################################### #
-# Consultor, favor utilizar este arquivo .R para realizar TODAS as análises
-# alocadas a você neste projeto pelo gerente responsável, salvo instrução 
-# explícita do gerente para mudança.
-#
-# Escreva seu código da forma mais clara e legível possível, eliminando códigos
-# de teste depreciados, ou ao menos deixando como comentário. Dê preferência
-# as funções dos pacotes contidos no Tidyverse para realizar suas análises.
-# ---------------------------------------------------------------------------- #
-
 library(psych)
 library(dplyr)
 library(plyr)
@@ -36,6 +11,112 @@ library(corrplot)
 library(olsrr)
 library(caret)
 
+perfis <- read_excel("perfis_cad_analiseestatistica_19_07.xlsx")
+
+perfis <- perfis %>%
+  select(CAD,ALTITUDE,PROFUND,DENSIDADE,CC,PMP,AREIA_GROS,AREIA_FINA,SILTE,ARGILA,
+         DECLIVID,DRENAGEM,UTM_E,UTM_N)
+
+perfis <- perfis[(-782),]
+
+plot(perfis)
+
+# Correlograma
+
+matrizcor <- cor(perfis)
+
+corrplot(matrizcor, method = "number")
+
+# Variável dependente CAD
+
+## Regressão
+
+modelo <- lm(data = perfis, CAD ~ ALTITUDE + PROFUND + DENSIDADE + CC + AREIA_GROS + AREIA_FINA + SILTE + ARGILA)
+summary(modelo)
+coef(modelo)
+
+# Stepwise
+
+modelo_inicial <- lm(modelo, data = perfis)
+modelo_stepwise <- step(modelo_inicial, direction = "both")
+
+# Modelo stepwise encontrado
+
+modelo <- lm(data = perfis, CAD ~ ALTITUDE + PROFUND + DENSIDADE + CC + AREIA_GROS + AREIA_FINA + SILTE)
+
+plot(modelo$fitted.values,perfis$CAD)
+
+## Pressupostos
+
+resíduos = modelo$residuals
+
+# histograma dos resíduos
+hist(resíduos)
+
+# Normalidade 
+
+qqnorm(resíduos)
+qqline(resíduos)
+shapiro.test(resíduos)
+ols_test_normality(resíduos)
+
+# Homocedasticidade
+
+bptest(modelo)
+
+# linearidade
+
+plot(modelo$fitted.values, modelo$residuals, xlab = "Valores Ajustados", ylab = "Resíduos")
+abline(h = 0, col = "red")  # linha horizontal em y = 0 para auxiliar na visualização
+
+# independencia
+
+plot(modelo$residuals)
+
+## Medidas importantes
+
+preditos <- modelo %>% predict(perfis)
+
+# R2
+
+summary(modelo)
+
+# MAE
+
+MAE <- mean(abs(perfis$CAD - preditos));MAE
+
+# RMSE
+
+RMSE <- sqrt(mean((perfis$CAD - preditos)^2));RMSE
+
+# MSE
+
+residuos <- residuals(modelo)^2
+
+MSE <- mean(residuos); MSE
+
+# MSPR
+
+(MSPR = sum((perfis$CAD-preditos)^2)/64)
+
+
+
+# Observações influentes
+
+medinflu1<-influence.measures(modelo)
+
+indice<-c(1:1208)
+
+# Cook
+plot(indice,cooks.distance(modelo), type = "l")
+plot(modelo,which=4)
+
+ols_plot_cooksd_chart(modelo)
+
+
+
+
+
 
 # Grande Fortaleza
 
@@ -47,6 +128,8 @@ perfis <- perfis %>%
   filter(str_sub(regiao,) == "Grande Fortaleza") %>%
   select(CAD,ALTITUDE,PROFUND,DENSIDADE,CC,PMP,AREIA_GROS,AREIA_FINA,SILTE,ARGILA,
          DECLIVID,DRENAGEM,UTM_E,UTM_N)
+
+plot(perfis)
 
 # Correlograma
 
@@ -72,6 +155,10 @@ modelo_stepwise <- step(modelo_inicial, direction = "both")
 modelo <- lm(data = perfis, CAD ~ ALTITUDE + PROFUND + CC + AREIA_GROS + AREIA_FINA)
 
 plot(modelo$fitted.values,perfis$CAD)
+
+
+#library(sandwich)
+#library(robustbase)
 
 ## Pressupostos
 
@@ -155,6 +242,8 @@ perfis <- perfis %>%
   select(CAD,ALTITUDE,PROFUND,DENSIDADE,CC,PMP,AREIA_GROS,AREIA_FINA,SILTE,ARGILA,
          DECLIVID,DRENAGEM,UTM_E,UTM_N)
 
+plot(perfis)
+
 perfis <- perfis [(-55),]
 perfis <- perfis [(-96),]
 perfis <- perfis [(-71),]
@@ -209,6 +298,7 @@ qqnorm(resíduos)
 qqline(resíduos)
 shapiro.test(resíduos)
 ols_test_normality(resíduos)
+shapiro.test(modelo$residuals)
 
 # Homocedasticidade
 
@@ -224,6 +314,9 @@ abline(h = 0, col = "red")  # linha horizontal em y = 0 para auxiliar na visuali
 plot(modelo$residuals)
 
 
+
+
+
 ## Medidas importantes
 
 preditos <- modelo %>% predict(perfis)
@@ -234,21 +327,21 @@ summary(modelo)
 
 # MAE
 
-MAE <- mean(abs(perfis$CAD - preditos));MAE
+MAE <- mean(abs(perfis$CAD - preditos));MAE #0.02989056
 
 # RMSE
 
-RMSE <- sqrt(mean((perfis$CAD - preditos)^2));RMSE
+RMSE <- sqrt(mean((perfis$CAD - preditos)^2));RMSE #0.03845653
 
 # MSE
 
 residuos <- residuals(modelo)^2
 
-MSE <- mean(residuos); MSE
+MSE <- mean(residuos); MSE #0.001478905
 
 # MSPR
 
-(MSPR = sum((perfis$CAD-preditos)^2)/64)
+(MSPR = sum((perfis$CAD-preditos)^2)/64) #0.001478905
 
 
 
@@ -277,6 +370,8 @@ perfis <- perfis %>%
   filter(str_sub(regiao,) == "Centro Sul") %>%
   select(CAD,ALTITUDE,PROFUND,DENSIDADE,CC,PMP,AREIA_GROS,AREIA_FINA,SILTE,ARGILA,
          DECLIVID,DRENAGEM,UTM_E,UTM_N)
+
+plot(perfis)
 
 perfis <- perfis [(-68),]
 perfis <- perfis [(-65),]
@@ -323,16 +418,13 @@ qqnorm(resíduos)
 qqline(resíduos)
 shapiro.test(resíduos)
 ols_test_normality(resíduos)
+shapiro.test(modelo$residuals)
 
 # Homocedasticidade
-
-modelo <- lm(data = perfis, log(CAD) ~ PROFUND + CC + AREIA_GROS + AREIA_FINA + SILTE)
 
 bptest(modelo)
 
 # linearidade
-
-modelo <- lm(data = perfis, CAD ~ PROFUND + CC + AREIA_GROS + AREIA_FINA + SILTE)
 
 plot(modelo$fitted.values, modelo$residuals, xlab = "Valores Ajustados", ylab = "Resíduos")
 abline(h = 0, col = "red")  # linha horizontal em y = 0 para auxiliar na visualização
@@ -399,6 +491,8 @@ perfis <- perfis %>%
   select(CAD,ALTITUDE,PROFUND,DENSIDADE,CC,PMP,AREIA_GROS,AREIA_FINA,SILTE,ARGILA,
          DECLIVID,DRENAGEM,UTM_E,UTM_N)
 
+plot(perfis)
+
 perfis <- perfis [(-38),]
 perfis <- perfis [(-19),]
 perfis <- perfis [(-19),]
@@ -442,6 +536,7 @@ qqnorm(resíduos)
 qqline(resíduos)
 shapiro.test(resíduos)
 ols_test_normality(resíduos)
+shapiro.test(modelo$residuals)
 
 # Homocedasticidade
 
@@ -510,6 +605,8 @@ perfis <- perfis %>%
   select(CAD,ALTITUDE,PROFUND,DENSIDADE,CC,PMP,AREIA_GROS,AREIA_FINA,SILTE,ARGILA,
          DECLIVID,DRENAGEM,UTM_E,UTM_N)
 
+plot(perfis)
+
 # Correlograma
 
 matrizcor <- cor(perfis)
@@ -548,6 +645,7 @@ qqnorm(resíduos)
 qqline(resíduos)
 shapiro.test(resíduos)
 ols_test_normality(resíduos)
+shapiro.test(modelo$residuals)
 
 # Homocedasticidade
 
@@ -617,6 +715,8 @@ perfis <- perfis %>%
   select(CAD,ALTITUDE,PROFUND,DENSIDADE,CC,PMP,AREIA_GROS,AREIA_FINA,SILTE,ARGILA,
          DECLIVID,DRENAGEM,UTM_E,UTM_N)
 
+plot(perfis)
+
 # Correlograma
 
 matrizcor <- cor(perfis)
@@ -655,6 +755,7 @@ qqnorm(resíduos)
 qqline(resíduos)
 shapiro.test(resíduos)
 ols_test_normality(resíduos)
+shapiro.test(modelo$residuals)
 
 # Homocedasticidade
 
@@ -724,6 +825,8 @@ perfis <- perfis %>%
   select(CAD,ALTITUDE,PROFUND,DENSIDADE,CC,PMP,AREIA_GROS,AREIA_FINA,SILTE,ARGILA,
          DECLIVID,DRENAGEM,UTM_E,UTM_N)
 
+plot(perfis)
+
 # Correlograma
 
 matrizcor <- cor(perfis)
@@ -762,6 +865,7 @@ qqnorm(resíduos)
 qqline(resíduos)
 shapiro.test(resíduos)
 ols_test_normality(resíduos)
+shapiro.test(modelo$residuals)
 
 # Homocedasticidade
 
@@ -831,6 +935,8 @@ perfis <- perfis %>%
   select(CAD,ALTITUDE,PROFUND,DENSIDADE,CC,PMP,AREIA_GROS,AREIA_FINA,SILTE,ARGILA,
          DECLIVID,DRENAGEM,UTM_E,UTM_N)
 
+plot(perfis)
+
 #perfis <- perfis[(-7),]
 
 # Correlograma
@@ -872,6 +978,7 @@ qqnorm(resíduos)
 qqline(resíduos)
 shapiro.test(resíduos)
 ols_test_normality(resíduos)
+shapiro.test(modelo$residuals)
 
 # Homocedasticidade
 
@@ -944,6 +1051,8 @@ perfis <- perfis %>%
   select(CAD,ALTITUDE,PROFUND,DENSIDADE,CC,PMP,AREIA_GROS,AREIA_FINA,SILTE,ARGILA,
          DECLIVID,DRENAGEM,UTM_E,UTM_N)
 
+plot(perfis)
+
 perfis <- perfis[(-70),]
 perfis <- perfis[(-70),]
 
@@ -984,6 +1093,7 @@ qqnorm(resíduos)
 qqline(resíduos)
 shapiro.test(resíduos)
 ols_test_normality(resíduos)
+shapiro.test(modelo$residuals)
 
 # Homocedasticidade
 
@@ -1055,6 +1165,8 @@ perfis <- perfis %>%
   filter(str_sub(regiao,) == "Sertão de Sobral") %>%
   select(CAD,ALTITUDE,PROFUND,DENSIDADE,CC,PMP,AREIA_GROS,AREIA_FINA,SILTE,ARGILA,
          DECLIVID,DRENAGEM,UTM_E,UTM_N)
+
+plot(perfis)
 
 # Correlograma
 
@@ -1160,6 +1272,8 @@ perfis <- perfis %>%
   filter(str_sub(regiao,) == "Sertão dos Crateús") %>%
   select(CAD,ALTITUDE,PROFUND,DENSIDADE,CC,PMP,AREIA_GROS,AREIA_FINA,SILTE,ARGILA,
          DECLIVID,DRENAGEM,UTM_E,UTM_N)
+
+plot(perfis)
 
 perfis <- perfis[(-211),]
 # Correlograma
@@ -1268,6 +1382,8 @@ perfis <- perfis %>%
   select(CAD,ALTITUDE,PROFUND,DENSIDADE,CC,PMP,AREIA_GROS,AREIA_FINA,SILTE,ARGILA,
          DECLIVID,DRENAGEM,UTM_E,UTM_N)
 
+plot(perfis)
+
 perfis <- perfis[(-89),]
 perfis <- perfis[(-91),]
 perfis <- perfis[(-103),]
@@ -1349,7 +1465,6 @@ ols_plot_cooksd_chart(modelo)
 
 
 
-
 # Vale do Jaguaribe (tirei muitos valores)
 
 perfis <- read_excel("perfis_cad_analiseestatistica_19_07.xlsx")
@@ -1360,6 +1475,8 @@ perfis <- perfis %>%
   filter(str_sub(regiao,) == "Vale do Jaguaribe") %>%
   select(CAD,ALTITUDE,PROFUND,DENSIDADE,CC,PMP,AREIA_GROS,AREIA_FINA,SILTE,ARGILA,
          DECLIVID,DRENAGEM,UTM_E,UTM_N)
+
+plot(perfis)
 
 perfis <- perfis[(-45),]
 perfis <- perfis[(-98),]
@@ -1477,22 +1594,22 @@ ols_plot_cooksd_chart(modelo)
 
 
 
+###################Domínios
 
-
-
-
-# SEM Sertão dos Crateús
+# Chapada do Apodi
 
 perfis <- read_excel("perfis_cad_analiseestatistica_19_07.xlsx")
 
 perfis <- perfis %>%
   select(CAD,ALTITUDE,PROFUND,DENSIDADE,CC,PMP,AREIA_GROS,AREIA_FINA,SILTE,ARGILA,
          DECLIVID,DRENAGEM,UTM_E,UTM_N,Municipio,regiao,dominios_n) %>%
-  filter(str_sub(regiao) != "Sertão dos Crateús") %>%
+  filter(str_sub(dominios_n) == "Chapada do Apodi") %>%
   select(CAD,ALTITUDE,PROFUND,DENSIDADE,CC,PMP,AREIA_GROS,AREIA_FINA,SILTE,ARGILA,
          DECLIVID,DRENAGEM,UTM_E,UTM_N)
 
-perfis <- perfis[(-211),]
+perfis <- perfis[(-18),]
+
+
 # Correlograma
 
 matrizcor <- cor(perfis)
@@ -1514,7 +1631,10 @@ modelo_stepwise <- step(modelo_inicial, direction = "both")
 
 # Modelo stepwise encontrado
 
-modelo <- lm(data = perfis, log(CAD) ~ ALTITUDE + PROFUND + DENSIDADE + CC + AREIA_GROS + SILTE + ARGILA)
+#modelo <- lm(data = perfis, CAD ~ DENSIDADE + CC + SILTE)
+modelo <- lm(data = perfis, CAD ~ DENSIDADE + CC)
+
+
 plot(modelo$fitted.values,perfis$CAD)
 
 ## Pressupostos
@@ -1544,38 +1664,519 @@ abline(h = 0, col = "red")  # linha horizontal em y = 0 para auxiliar na visuali
 
 plot(modelo$residuals)
 
-## Medidas importantes
+# Observações influentes
 
-preditos <- modelo %>% predict(perfis)
+medinflu1<-influence.measures(modelo)
+indice<-c(1:41)
 
-# R2
+# Cook
+plot(indice,cooks.distance(modelo), type = "l")
+plot(modelo,which=4)
 
+ols_plot_cooksd_chart(modelo)
+
+
+
+
+
+# Planalto da Ibiapaba
+
+perfis <- read_excel("perfis_cad_analiseestatistica_19_07.xlsx")
+
+perfis <- perfis %>%
+  select(CAD,ALTITUDE,PROFUND,DENSIDADE,CC,PMP,AREIA_GROS,AREIA_FINA,SILTE,ARGILA,
+         DECLIVID,DRENAGEM,UTM_E,UTM_N,Municipio,regiao,dominios_n) %>%
+  filter(str_sub(dominios_n) == "Planalto da Ibiapaba") %>%
+  select(CAD,ALTITUDE,PROFUND,DENSIDADE,CC,PMP,AREIA_GROS,AREIA_FINA,SILTE,ARGILA,
+         DECLIVID,DRENAGEM,UTM_E,UTM_N)
+
+perfis <- perfis[(-58),]
+perfis <- perfis[(-55),]
+perfis <- perfis[(-8),]
+perfis <- perfis[(-27),]
+
+
+# Correlograma
+
+matrizcor <- cor(perfis)
+
+corrplot(matrizcor, method = "number")
+
+# Variável dependente CAD
+
+## Regressão
+
+modelo <- lm(data = perfis, CAD ~ ALTITUDE + PROFUND + DENSIDADE + CC + AREIA_GROS + AREIA_FINA + SILTE + ARGILA)
 summary(modelo)
+coef(modelo)
 
-# MAE
+# Stepwise
 
-MAE <- mean(abs(perfis$CAD - preditos));MAE
+modelo_inicial <- lm(modelo, data = perfis)
+modelo_stepwise <- step(modelo_inicial, direction = "both")
 
-# RMSE
+# Modelo stepwise encontrado
 
-RMSE <- sqrt(mean((perfis$CAD - preditos)^2));RMSE
-
-# MSE
-
-residuos <- residuals(modelo)^2
-
-MSE <- mean(residuos); MSE
-
-# MSPR
-
-(MSPR = sum((perfis$CAD-preditos)^2)/64)
+#modelo <- lm(data = perfis, CAD ~ ALTITUDE + CC + AREIA_GROS + AREIA_FINA + SILTE)
+modelo <- lm(data = perfis, CAD ~ CC + AREIA_GROS + AREIA_FINA + SILTE)
 
 
+plot(modelo$fitted.values,perfis$CAD)
+
+## Pressupostos
+
+resíduos = modelo$residuals
+
+# histograma dos resíduos
+hist(resíduos)
+
+# Normalidade 
+
+qqnorm(resíduos)
+qqline(resíduos)
+shapiro.test(resíduos)
+ols_test_normality(resíduos)
+
+# Homocedasticidade
+
+modelo <- lm(data = perfis, log(CAD) ~ CC + AREIA_GROS + AREIA_FINA + SILTE)
+
+bptest(modelo)
+
+# linearidade
+
+modelo <- lm(data = perfis, CAD ~ CC + AREIA_GROS + AREIA_FINA + SILTE)
+
+plot(modelo$fitted.values, modelo$residuals, xlab = "Valores Ajustados", ylab = "Resíduos")
+abline(h = 0, col = "red")  # linha horizontal em y = 0 para auxiliar na visualização
+
+# independencia
+
+plot(modelo$residuals)
 
 # Observações influentes
 
 medinflu1<-influence.measures(modelo)
-indice<-c(1:211)
+indice<-c(1:93)
+
+# Cook
+plot(indice,cooks.distance(modelo), type = "l")
+plot(modelo,which=4)
+
+ols_plot_cooksd_chart(modelo)
+
+
+
+
+
+
+# Planalto da Ibiapaba
+
+perfis <- read_excel("perfis_cad_analiseestatistica_19_07.xlsx")
+
+perfis <- perfis %>%
+  select(CAD,ALTITUDE,PROFUND,DENSIDADE,CC,PMP,AREIA_GROS,AREIA_FINA,SILTE,ARGILA,
+         DECLIVID,DRENAGEM,UTM_E,UTM_N,Municipio,regiao,dominios_n) %>%
+  filter(str_sub(dominios_n) == "Planalto da Ibiapaba") %>%
+  select(CAD,ALTITUDE,PROFUND,DENSIDADE,CC,PMP,AREIA_GROS,AREIA_FINA,SILTE,ARGILA,
+         DECLIVID,DRENAGEM,UTM_E,UTM_N)
+
+perfis <- perfis[(-58),]
+perfis <- perfis[(-55),]
+perfis <- perfis[(-8),]
+perfis <- perfis[(-27),]
+
+
+# Correlograma
+
+matrizcor <- cor(perfis)
+
+corrplot(matrizcor, method = "number")
+
+# Variável dependente CAD
+
+## Regressão
+
+modelo <- lm(data = perfis, CAD ~ ALTITUDE + PROFUND + DENSIDADE + CC + AREIA_GROS + AREIA_FINA + SILTE + ARGILA)
+summary(modelo)
+coef(modelo)
+
+# Stepwise
+
+modelo_inicial <- lm(modelo, data = perfis)
+modelo_stepwise <- step(modelo_inicial, direction = "both")
+
+# Modelo stepwise encontrado
+
+#modelo <- lm(data = perfis, CAD ~ ALTITUDE + CC + AREIA_GROS + AREIA_FINA + SILTE)
+modelo <- lm(data = perfis, CAD ~ CC + AREIA_GROS + AREIA_FINA + SILTE)
+
+
+plot(modelo$fitted.values,perfis$CAD)
+
+## Pressupostos
+
+resíduos = modelo$residuals
+
+# histograma dos resíduos
+hist(resíduos)
+
+# Normalidade 
+
+qqnorm(resíduos)
+qqline(resíduos)
+shapiro.test(resíduos)
+ols_test_normality(resíduos)
+
+# Homocedasticidade
+
+modelo <- lm(data = perfis, log(CAD) ~ CC + AREIA_GROS + AREIA_FINA + SILTE)
+
+bptest(modelo)
+
+# linearidade
+
+modelo <- lm(data = perfis, CAD ~ CC + AREIA_GROS + AREIA_FINA + SILTE)
+
+plot(modelo$fitted.values, modelo$residuals, xlab = "Valores Ajustados", ylab = "Resíduos")
+abline(h = 0, col = "red")  # linha horizontal em y = 0 para auxiliar na visualização
+
+# independencia
+
+plot(modelo$residuals)
+
+# Observações influentes
+
+medinflu1<-influence.measures(modelo)
+indice<-c(1:93)
+
+# Cook
+plot(indice,cooks.distance(modelo), type = "l")
+plot(modelo,which=4)
+
+ols_plot_cooksd_chart(modelo)
+
+
+
+
+
+# Planície Ribeirinha
+
+perfis <- read_excel("perfis_cad_analiseestatistica_19_07.xlsx")
+
+perfis <- perfis %>%
+  select(CAD,ALTITUDE,PROFUND,DENSIDADE,CC,PMP,AREIA_GROS,AREIA_FINA,SILTE,ARGILA,
+         DECLIVID,DRENAGEM,UTM_E,UTM_N,Municipio,regiao,dominios_n) %>%
+  filter(str_sub(dominios_n) == "Planície Ribeirinha") %>%
+  select(CAD,ALTITUDE,PROFUND,DENSIDADE,CC,PMP,AREIA_GROS,AREIA_FINA,SILTE,ARGILA,
+         DECLIVID,DRENAGEM,UTM_E,UTM_N)
+
+# Correlograma
+
+matrizcor <- cor(perfis)
+
+corrplot(matrizcor, method = "number")
+
+# Variável dependente CAD
+
+## Regressão
+
+modelo <- lm(data = perfis, CAD ~ ALTITUDE + PROFUND + DENSIDADE + CC + AREIA_GROS + AREIA_FINA + SILTE + ARGILA)
+summary(modelo)
+coef(modelo)
+
+# Stepwise
+
+modelo_inicial <- lm(modelo, data = perfis)
+modelo_stepwise <- step(modelo_inicial, direction = "both")
+
+# Modelo stepwise encontrado
+
+modelo <- lm(data = perfis, CAD ~ PROFUND + CC + AREIA_GROS)
+
+plot(modelo$fitted.values,perfis$CAD)
+
+## Pressupostos
+
+resíduos = modelo$residuals
+
+# histograma dos resíduos
+hist(resíduos)
+
+# Normalidade 
+
+qqnorm(resíduos)
+qqline(resíduos)
+shapiro.test(resíduos)
+ols_test_normality(resíduos)
+
+# Homocedasticidade
+
+bptest(modelo)
+
+# linearidade
+
+plot(modelo$fitted.values, modelo$residuals, xlab = "Valores Ajustados", ylab = "Resíduos")
+abline(h = 0, col = "red")  # linha horizontal em y = 0 para auxiliar na visualização
+
+# independencia
+
+plot(modelo$residuals)
+
+# Observações influentes
+
+medinflu1<-influence.measures(modelo)
+indice<-c(1:21)
+
+# Cook
+plot(indice,cooks.distance(modelo), type = "l")
+plot(modelo,which=4)
+
+ols_plot_cooksd_chart(modelo)
+
+
+
+
+
+# Serras Secas
+
+perfis <- read_excel("perfis_cad_analiseestatistica_19_07.xlsx")
+
+perfis <- perfis %>%
+  select(CAD,ALTITUDE,PROFUND,DENSIDADE,CC,PMP,AREIA_GROS,AREIA_FINA,SILTE,ARGILA,
+         DECLIVID,DRENAGEM,UTM_E,UTM_N,Municipio,regiao,dominios_n) %>%
+  filter(str_sub(dominios_n) == "Serras Secas") %>%
+  select(CAD,ALTITUDE,PROFUND,DENSIDADE,CC,PMP,AREIA_GROS,AREIA_FINA,SILTE,ARGILA,
+         DECLIVID,DRENAGEM,UTM_E,UTM_N)
+
+
+perfis <- perfis[(-40),]
+
+# Correlograma
+
+matrizcor <- cor(perfis)
+
+corrplot(matrizcor, method = "number")
+
+# Variável dependente CAD
+
+## Regressão
+
+modelo <- lm(data = perfis, CAD ~ ALTITUDE + PROFUND + DENSIDADE + CC + AREIA_GROS + AREIA_FINA + SILTE + ARGILA)
+summary(modelo)
+coef(modelo)
+
+# Stepwise
+
+modelo_inicial <- lm(modelo, data = perfis)
+modelo_stepwise <- step(modelo_inicial, direction = "both")
+
+# Modelo stepwise encontrado
+
+#modelo <- lm(data = perfis, CAD ~ PROFUND + DENSIDADE + CC + AREIA_GROS + AREIA_FINA + SILTE + ARGILA)
+modelo <- lm(data = perfis, CAD ~ PROFUND + DENSIDADE + CC + AREIA_GROS + AREIA_FINA)
+
+plot(modelo$fitted.values,perfis$CAD)
+
+## Pressupostos
+
+resíduos = modelo$residuals
+
+# histograma dos resíduos
+hist(resíduos)
+
+# Normalidade 
+
+qqnorm(resíduos)
+qqline(resíduos)
+shapiro.test(resíduos)
+ols_test_normality(resíduos)
+
+# Homocedasticidade
+
+bptest(modelo)
+
+# linearidade
+
+plot(modelo$fitted.values, modelo$residuals, xlab = "Valores Ajustados", ylab = "Resíduos")
+abline(h = 0, col = "red")  # linha horizontal em y = 0 para auxiliar na visualização
+
+# independencia
+
+plot(modelo$residuals)
+
+# Observações influentes
+
+medinflu1<-influence.measures(modelo)
+indice<-c(1:43)
+
+# Cook
+plot(indice,cooks.distance(modelo), type = "l")
+plot(modelo,which=4)
+
+ols_plot_cooksd_chart(modelo)
+
+
+
+
+
+# Serras Secas
+
+perfis <- read_excel("perfis_cad_analiseestatistica_19_07.xlsx")
+
+perfis <- perfis %>%
+  select(CAD,ALTITUDE,PROFUND,DENSIDADE,CC,PMP,AREIA_GROS,AREIA_FINA,SILTE,ARGILA,
+         DECLIVID,DRENAGEM,UTM_E,UTM_N,Municipio,regiao,dominios_n) %>%
+  filter(str_sub(dominios_n) == "Serras Secas") %>%
+  select(CAD,ALTITUDE,PROFUND,DENSIDADE,CC,PMP,AREIA_GROS,AREIA_FINA,SILTE,ARGILA,
+         DECLIVID,DRENAGEM,UTM_E,UTM_N)
+
+
+perfis <- perfis[(-40),]
+
+# Correlograma
+
+matrizcor <- cor(perfis)
+
+corrplot(matrizcor, method = "number")
+
+# Variável dependente CAD
+
+## Regressão
+
+modelo <- lm(data = perfis, CAD ~ ALTITUDE + PROFUND + DENSIDADE + CC + AREIA_GROS + AREIA_FINA + SILTE + ARGILA)
+summary(modelo)
+coef(modelo)
+
+# Stepwise
+
+modelo_inicial <- lm(modelo, data = perfis)
+modelo_stepwise <- step(modelo_inicial, direction = "both")
+
+# Modelo stepwise encontrado
+
+#modelo <- lm(data = perfis, CAD ~ PROFUND + DENSIDADE + CC + AREIA_GROS + AREIA_FINA + SILTE + ARGILA)
+modelo <- lm(data = perfis, CAD ~ PROFUND + DENSIDADE + CC + AREIA_GROS + AREIA_FINA)
+
+plot(modelo$fitted.values,perfis$CAD)
+
+## Pressupostos
+
+resíduos = modelo$residuals
+
+# histograma dos resíduos
+hist(resíduos)
+
+# Normalidade 
+
+qqnorm(resíduos)
+qqline(resíduos)
+shapiro.test(resíduos)
+ols_test_normality(resíduos)
+
+# Homocedasticidade
+
+bptest(modelo)
+
+# linearidade
+
+plot(modelo$fitted.values, modelo$residuals, xlab = "Valores Ajustados", ylab = "Resíduos")
+abline(h = 0, col = "red")  # linha horizontal em y = 0 para auxiliar na visualização
+
+# independencia
+
+plot(modelo$residuals)
+
+# Observações influentes
+
+medinflu1<-influence.measures(modelo)
+indice<-c(1:43)
+
+# Cook
+plot(indice,cooks.distance(modelo), type = "l")
+plot(modelo,which=4)
+
+ols_plot_cooksd_chart(modelo)
+
+
+
+
+
+
+
+# Sertões
+
+perfis <- read_excel("perfis_cad_analiseestatistica_19_07.xlsx")
+
+perfis <- perfis %>%
+  select(CAD,ALTITUDE,PROFUND,DENSIDADE,CC,PMP,AREIA_GROS,AREIA_FINA,SILTE,ARGILA,
+         DECLIVID,DRENAGEM,UTM_E,UTM_N,Municipio,regiao,dominios_n) %>%
+  filter(str_sub(dominios_n) == "Sertões") %>%
+  select(CAD,ALTITUDE,PROFUND,DENSIDADE,CC,PMP,AREIA_GROS,AREIA_FINA,SILTE,ARGILA,
+         DECLIVID,DRENAGEM,UTM_E,UTM_N)
+
+
+perfis <- perfis[(-577),]
+perfis <- perfis[(-568),]
+
+# Correlograma
+
+matrizcor <- cor(perfis)
+
+corrplot(matrizcor, method = "number")
+
+# Variável dependente CAD
+
+## Regressão
+
+modelo <- lm(data = perfis, CAD ~ ALTITUDE + PROFUND + DENSIDADE + CC + AREIA_GROS + AREIA_FINA + SILTE + ARGILA)
+summary(modelo)
+coef(modelo)
+
+plot(modelo)
+
+# Stepwise
+
+modelo_inicial <- lm(modelo, data = perfis)
+modelo_stepwise <- step(modelo_inicial, direction = "both")
+
+# Modelo stepwise encontrado
+
+modelo <- lm(data = perfis, CAD ~ ALTITUDE + PROFUND + DENSIDADE + CC + AREIA_GROS + AREIA_FINA + SILTE)
+
+plot(modelo$fitted.values,perfis$CAD)
+
+## Pressupostos
+
+resíduos = modelo$residuals
+
+# histograma dos resíduos
+hist(resíduos)
+
+# Normalidade 
+
+qqnorm(resíduos)
+qqline(resíduos)
+shapiro.test(resíduos)
+ols_test_normality(resíduos)
+
+# Homocedasticidade
+
+bptest(modelo)
+
+# linearidade
+
+plot(modelo$fitted.values, modelo$residuals, xlab = "Valores Ajustados", ylab = "Resíduos")
+abline(h = 0, col = "red")  # linha horizontal em y = 0 para auxiliar na visualização
+
+# independencia
+
+plot(modelo$residuals)
+
+# Observações influentes
+
+medinflu1<-influence.measures(modelo)
+indice<-c(1:896)
 
 # Cook
 plot(indice,cooks.distance(modelo), type = "l")
