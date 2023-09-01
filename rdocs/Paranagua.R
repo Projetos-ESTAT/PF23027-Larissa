@@ -162,6 +162,7 @@ modelo_inicial <- lm(modelo, data = perfis)
 modelo_stepwise <- step(modelo_inicial, direction = "both")
 
 # Modelo stepwise encontrado
+caminho <- "D:/Downloads/ESTAT/PF23027-Larissa/resultados"
 
 modelo <- lm(data = perfis, CAD ~ ALTITUDE + PROFUND + CC + AREIA_GROS + AREIA_FINA)
 summary(modelo)
@@ -171,8 +172,8 @@ ggplot(modelo) +
   aes(x = modelo$fitted.values, y = perfis$CAD) +
   geom_point(colour = "#A11D21", size = 3) +
   labs(
-    x = "Consumo em Cidade (milhas/galão)",
-    y = "Consumo em Rodovias (milhas/galão)"
+    x = "Valores preditos de CAD",
+    y = "Valores observados de CAD"
   ) +
   theme_estat()
 ggsave("disp_uni.pdf", width = 158, height = 93, units = "mm")
@@ -207,6 +208,15 @@ abline(h = 0, col = "red")  # linha horizontal em y = 0 para auxiliar na visuali
 # independencia
 
 plot(modelo$residuals)
+modelo$index <- seq_along(modelo$residuals)
+
+ggplot(modelo, aes( y = residuals )) +
+  geom_point(colour = "#A11D21", size = 3) +
+  labs(
+    x = "Observação",
+    y= "Resíduos"
+  ) +
+  theme_estat()
 
 ## Medidas importantes
 
