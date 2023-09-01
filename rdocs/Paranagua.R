@@ -15,7 +15,7 @@ setwd('D:/Downloads/ESTAT/PF23027-Larissa/banco')
 perfis <- read_excel("perfis_cad_analiseestatistica_19_07.xlsx")
 
 perfis <- perfis %>%
-  select(CAD,ALTITUDE,PROFUND,DENSIDADE,CC,PMP,AREIA_GROS,AREIA_FINA,SILTE,ARGILA, regiao)
+  select(PERFIL,CAD,ALTITUDE,PROFUND,DENSIDADE,CC,PMP,AREIA_GROS,AREIA_FINA,SILTE,ARGILA, regiao)
 
 #perfis <- perfis[(-782),]
 
@@ -125,7 +125,7 @@ perfis <- read_excel("perfis_cad_analiseestatistica_19_07.xlsx")
 
 perfis <- perfis %>%
   select(CAD,ALTITUDE,PROFUND,DENSIDADE,CC,AREIA_GROS,AREIA_FINA,SILTE,ARGILA,
-         regiao) %>%
+         regiao, PERFIL) %>%
   filter(str_sub(regiao,) == "Grande Fortaleza") %>%
   select(CAD,ALTITUDE,PROFUND,DENSIDADE,CC,AREIA_GROS,AREIA_FINA,SILTE,ARGILA)
 
@@ -164,8 +164,11 @@ modelo_stepwise <- step(modelo_inicial, direction = "both")
 # Modelo stepwise encontrado
 caminho <- "D:/Downloads/ESTAT/PF23027-Larissa/resultados"
 
+perfis <- perfis[-c(18,27),]
+
 modelo <- lm(data = perfis, CAD ~ ALTITUDE + PROFUND + CC + AREIA_GROS + AREIA_FINA)
 summary(modelo)
+coef(modelo)
 plot(modelo$fitted.values,perfis$CAD)
 
 ggplot(modelo) +
@@ -176,7 +179,7 @@ ggplot(modelo) +
     y = "Valores observados de CAD"
   ) +
   theme_estat()
-ggsave("disp_uni.pdf", width = 158, height = 93, units = "mm")
+ggsave("disp_uni_out.pdf", width = 158, height = 93, units = "mm")
 
 
 #library(sandwich)
@@ -208,15 +211,16 @@ abline(h = 0, col = "red")  # linha horizontal em y = 0 para auxiliar na visuali
 # independencia
 
 plot(modelo$residuals)
-modelo$index <- seq_along(modelo$residuals)
 
-ggplot(modelo, aes( y = residuals )) +
+ggplot(modelo) +
+  aes(x = 1:length(modelo$residuals), y = modelo$residuals) +
   geom_point(colour = "#A11D21", size = 3) +
   labs(
     x = "Observação",
-    y= "Resíduos"
+    y = "Resíduos"
   ) +
   theme_estat()
+ggsave("disp_uni3.pdf", width = 158, height = 93, units = "mm")
 
 ## Medidas importantes
 
@@ -244,7 +248,8 @@ MSE <- mean(residuos); MSE
 
 (MSPR = sum((perfis$CAD-preditos)^2)/64)
 
-
+(vi<-vif(modelo))
+mean(vi)
 
 # Observações influentes
 
@@ -258,20 +263,41 @@ plot(modelo,which=4)
 
 ols_plot_cooksd_chart(modelo)
 
+ols_plot_cooksd_chart(modelo) +
+  theme_estat() +  # Define um tema minimalista
+  labs(
+    x = "Índice da Observação",  # Rótulo do eixo x
+    y = "Cook's Distance"  # Rótulo do eixo y
+  ) +
+  theme(axis.text = element_text(size = 12),  # Tamanho do texto nos eixos
+        axis.title = element_text(size = 14),  # Tamanho dos rótulos dos eixos
+        legend.position = "none",  # Remove a legenda
+        plot.title = element_text(size = 16, hjust = 0.5),  # Título do gráfico
+        plot.caption = element_blank())  
+
+# validação cruzada
+
+contr<-trainControl(method="LOOCV")
+modelov1<-train(CAD ~ ALTITUDE + PROFUND + CC + AREIA_GROS + AREIA_FINA,
+                data=perfis, method="lm", trControl=contr)
+print(modelov1)
 
 
 
 
-# Cariri (muitos valores tirados)
+
+######### Cariri ##########
+#(muitos valores tirados)
 
 perfis <- read_excel("perfis_cad_analiseestatistica_19_07.xlsx")
+perfis <- perfis %>%
+  select(PERFIL,CAD,ALTITUDE,PROFUND,DENSIDADE,CC,PMP,AREIA_GROS,AREIA_FINA,SILTE,ARGILA, regiao)
 
 perfis <- perfis %>%
-  select(CAD,ALTITUDE,PROFUND,DENSIDADE,CC,PMP,AREIA_GROS,AREIA_FINA,SILTE,ARGILA,
-         DECLIVID,DRENAGEM,UTM_E,UTM_N,Municipio,regiao,dominios_n) %>%
+  select(CAD,ALTITUDE,PROFUND,DENSIDADE,CC,AREIA_GROS,AREIA_FINA,SILTE,ARGILA,
+         regiao, PERFIL) %>%
   filter(str_sub(regiao,) == "Cariri") %>%
-  select(CAD,ALTITUDE,PROFUND,DENSIDADE,CC,PMP,AREIA_GROS,AREIA_FINA,SILTE,ARGILA,
-         DECLIVID,DRENAGEM,UTM_E,UTM_N)
+  select(CAD,ALTITUDE,PROFUND,DENSIDADE,CC,AREIA_GROS,AREIA_FINA,SILTE,ARGILA)
 
 plot(perfis)
 
@@ -311,7 +337,7 @@ modelo_stepwise <- step(modelo_inicial, direction = "both")
 #modelo <- lm(data = perfis, CAD ~ DENSIDADE + CC + AREIA_GROS + AREIA_FINA + SILTE + ARGILA)
 #modelo <- lm(data = perfis, CAD ~ CC + AREIA_GROS + ARGILA)
 modelo <- lm(data = perfis, CAD ~ CC + ARGILA)
-
+summary(modelo)
 
 plot(modelo$fitted.values,perfis$CAD)
 
@@ -348,33 +374,6 @@ plot(modelo$residuals)
 
 
 
-## Medidas importantes
-
-preditos <- modelo %>% predict(perfis)
-
-# R2
-
-summary(modelo)
-
-# MAE
-
-MAE <- mean(abs(perfis$CAD - preditos));MAE #0.02989056
-
-# RMSE
-
-RMSE <- sqrt(mean((perfis$CAD - preditos)^2));RMSE #0.03845653
-
-# MSE
-
-residuos <- residuals(modelo)^2
-
-MSE <- mean(residuos); MSE #0.001478905
-
-# MSPR
-
-(MSPR = sum((perfis$CAD-preditos)^2)/64) #0.001478905
-
-
 
 # Observações influentes
 
@@ -391,16 +390,14 @@ ols_plot_cooksd_chart(modelo)
 
 
 
-# Centro Sul
+########### Centro Sul ##############
 
 perfis <- read_excel("perfis_cad_analiseestatistica_19_07.xlsx")
-
 perfis <- perfis %>%
-  select(CAD,ALTITUDE,PROFUND,DENSIDADE,CC,PMP,AREIA_GROS,AREIA_FINA,SILTE,ARGILA,
-         DECLIVID,DRENAGEM,UTM_E,UTM_N,Municipio,regiao,dominios_n) %>%
+  select(CAD,ALTITUDE,PROFUND,DENSIDADE,CC,AREIA_GROS,AREIA_FINA,SILTE,ARGILA,
+         regiao, PERFIL) %>%
   filter(str_sub(regiao,) == "Centro Sul") %>%
-  select(CAD,ALTITUDE,PROFUND,DENSIDADE,CC,PMP,AREIA_GROS,AREIA_FINA,SILTE,ARGILA,
-         DECLIVID,DRENAGEM,UTM_E,UTM_N)
+  select(CAD,ALTITUDE,PROFUND,DENSIDADE,CC,AREIA_GROS,AREIA_FINA,SILTE,ARGILA)
 
 plot(perfis)
 
@@ -431,10 +428,22 @@ modelo_stepwise <- step(modelo_inicial, direction = "both")
 # Modelo stepwise encontrado
 
 modelo <- lm(data = perfis, CAD ~ PROFUND + CC + AREIA_GROS + AREIA_FINA + SILTE)
+summary(modelo)
 #modelo <- lm(data = perfis, CAD ~ CC + AREIA_GROS + AREIA_FINA + SILTE)
 
 
 plot(modelo$fitted.values,perfis$CAD)
+
+ggplot(modelo) +
+  aes(x = modelo$fitted.values, y = perfis$CAD) +
+  geom_point(colour = "#A11D21", size = 3) +
+  labs(
+    x = "Valores preditos de CAD",
+    y = "Valores observados de CAD"
+  ) +
+  theme_estat()
+ggsave("disp_uni_centrosul.pdf", width = 158, height = 93, units = "mm")
+
 
 ## Pressupostos
 
@@ -464,36 +473,6 @@ abline(h = 0, col = "red")  # linha horizontal em y = 0 para auxiliar na visuali
 
 plot(modelo$residuals)
 
-## Medidas importantes
-
-modelo <- lm(data = perfis, CAD ~ PROFUND + CC + AREIA_GROS + AREIA_FINA + SILTE)
-
-
-preditos <- modelo %>% predict(perfis)
-
-# R2
-
-summary(modelo)
-
-# MAE
-
-MAE <- mean(abs(perfis$CAD - preditos));MAE
-
-# RMSE
-
-RMSE <- sqrt(mean((perfis$CAD - preditos)^2));RMSE
-
-# MSE
-
-residuos <- residuals(modelo)^2
-
-MSE <- mean(residuos); MSE
-
-# MSPR
-
-(MSPR = sum((perfis$CAD-preditos)^2)/64)
-
-
 
 # Observações influentes
 
@@ -506,10 +485,6 @@ plot(indice,cooks.distance(modelo), type = "l")
 plot(modelo,which=4)
 
 ols_plot_cooksd_chart(modelo)
-
-
-
-
 
 # Litoral Leste
 
@@ -582,34 +557,6 @@ abline(h = 0, col = "red")  # linha horizontal em y = 0 para auxiliar na visuali
 
 plot(modelo$residuals)
 
-## Medidas importantes
-
-preditos <- modelo %>% predict(perfis)
-
-# R2
-
-summary(modelo)
-
-# MAE
-
-MAE <- mean(abs(perfis$CAD - preditos));MAE
-
-# RMSE
-
-RMSE <- sqrt(mean((perfis$CAD - preditos)^2));RMSE
-
-# MSE
-
-residuos <- residuals(modelo)^2
-
-MSE <- mean(residuos); MSE
-
-# MSPR
-
-(MSPR = sum((perfis$CAD-preditos)^2)/64)
-
-
-
 # Observações influentes
 
 medinflu1<-influence.measures(modelo)
@@ -625,7 +572,7 @@ ols_plot_cooksd_chart(modelo)
 
 
 
-# Litoral Oeste / Vale do Curu
+######## Litoral Oeste / Vale do Curu ##########3
 
 perfis <- read_excel("perfis_cad_analiseestatistica_19_07.xlsx")
 
@@ -691,32 +638,6 @@ abline(h = 0, col = "red")  # linha horizontal em y = 0 para auxiliar na visuali
 
 plot(modelo$residuals)
 
-## Medidas importantes
-
-preditos <- modelo %>% predict(perfis)
-
-# R2
-
-summary(modelo)
-
-# MAE
-
-MAE <- mean(abs(perfis$CAD - preditos));MAE
-
-# RMSE
-
-RMSE <- sqrt(mean((perfis$CAD - preditos)^2));RMSE
-
-# MSE
-
-residuos <- residuals(modelo)^2
-
-MSE <- mean(residuos); MSE
-
-# MSPR
-
-(MSPR = sum((perfis$CAD-preditos)^2)/64)
-
 
 
 # Observações influentes
@@ -730,9 +651,6 @@ plot(indice,cooks.distance(modelo), type = "l")
 plot(modelo,which=4)
 
 ols_plot_cooksd_chart(modelo)
-
-
-
 
 
 # Maciço de Baturité
