@@ -11,13 +11,13 @@ library(corrplot)
 library(olsrr)
 library(caret)
 
+setwd('D:/Downloads/ESTAT/PF23027-Larissa/banco')
 perfis <- read_excel("perfis_cad_analiseestatistica_19_07.xlsx")
 
 perfis <- perfis %>%
-  select(CAD,ALTITUDE,PROFUND,DENSIDADE,CC,PMP,AREIA_GROS,AREIA_FINA,SILTE,ARGILA,
-         DECLIVID,DRENAGEM,UTM_E,UTM_N)
+  select(CAD,ALTITUDE,PROFUND,DENSIDADE,CC,PMP,AREIA_GROS,AREIA_FINA,SILTE,ARGILA, regiao)
 
-perfis <- perfis[(-782),]
+#perfis <- perfis[(-782),]
 
 plot(perfis)
 
@@ -34,6 +34,7 @@ corrplot(matrizcor, method = "number")
 modelo <- lm(data = perfis, CAD ~ ALTITUDE + PROFUND + DENSIDADE + CC + AREIA_GROS + AREIA_FINA + SILTE + ARGILA)
 summary(modelo)
 coef(modelo)
+outlierTest(modelo)
 
 # Stepwise
 
@@ -118,24 +119,34 @@ ols_plot_cooksd_chart(modelo)
 
 
 
-# Grande Fortaleza
+######## Grande Fortaleza #########
 
 perfis <- read_excel("perfis_cad_analiseestatistica_19_07.xlsx")
 
 perfis <- perfis %>%
-  select(CAD,ALTITUDE,PROFUND,DENSIDADE,CC,PMP,AREIA_GROS,AREIA_FINA,SILTE,ARGILA,
-         DECLIVID,DRENAGEM,UTM_E,UTM_N,Municipio,regiao,dominios_n) %>%
+  select(CAD,ALTITUDE,PROFUND,DENSIDADE,CC,AREIA_GROS,AREIA_FINA,SILTE,ARGILA,
+         regiao) %>%
   filter(str_sub(regiao,) == "Grande Fortaleza") %>%
-  select(CAD,ALTITUDE,PROFUND,DENSIDADE,CC,PMP,AREIA_GROS,AREIA_FINA,SILTE,ARGILA,
-         DECLIVID,DRENAGEM,UTM_E,UTM_N)
+  select(CAD,ALTITUDE,PROFUND,DENSIDADE,CC,AREIA_GROS,AREIA_FINA,SILTE,ARGILA)
 
 plot(perfis)
+
+# ggplot(perfis) +
+#   aes(x = , y = hwy) +
+#   geom_point(colour = "#A11D21", size = 3) +
+#   labs(
+#     x = "Consumo em Cidade (milhas/galão)",
+#     y = "Consumo em Rodovias (milhas/galão)"
+#   ) +
+#   theme_estat()
+# ggsave("disp_uni.pdf", width = 158, height = 93, units = "mm")
 
 # Correlograma
 
 matrizcor <- cor(perfis)
 
 corrplot(matrizcor, method = "number")
+
 
 # Variável dependente CAD
 
@@ -153,8 +164,18 @@ modelo_stepwise <- step(modelo_inicial, direction = "both")
 # Modelo stepwise encontrado
 
 modelo <- lm(data = perfis, CAD ~ ALTITUDE + PROFUND + CC + AREIA_GROS + AREIA_FINA)
-
+summary(modelo)
 plot(modelo$fitted.values,perfis$CAD)
+
+ggplot(modelo) +
+  aes(x = modelo$fitted.values, y = perfis$CAD) +
+  geom_point(colour = "#A11D21", size = 3) +
+  labs(
+    x = "Consumo em Cidade (milhas/galão)",
+    y = "Consumo em Rodovias (milhas/galão)"
+  ) +
+  theme_estat()
+ggsave("disp_uni.pdf", width = 158, height = 93, units = "mm")
 
 
 #library(sandwich)

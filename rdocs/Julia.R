@@ -72,6 +72,29 @@ A distribuição das variáveis deve ser semelhante à curva normal. NÃO OK'
 
 plot(banco1)
 
+combinacoes <- combn(names(banco1), 2, simplify = FALSE)  # Todas as combinações de variáveis
+
+# Crie um layout de várias parcelas para o painel
+n <- length(combinacoes)
+par(mfrow = c(ceiling(sqrt(n)), ceiling(sqrt(n))))
+
+# Crie gráficos de dispersão para todas as combinações
+for (i in 1:n) {
+  x_var <- combinacoes[[i]][1]
+  y_var <- combinacoes[[i]][2]
+  p <- ggplot(banco1) +
+    aes(x = combinacoes[[i]][1], y = combinacoes[[i]][2]) +
+    geom_point(colour = "#A11D21", size = 3) +
+    labs(
+      x =  x_var,
+      y = y_var
+    ) +
+    theme_estat()
+  print(p)
+}
+
+
+
 ' relação linear só entre CC e PMP e elas com relação a CAD '
 
 hist(banco1$CAD)
@@ -700,3 +723,5 @@ mean(vi)
 # plot(weighted_model$fitted.values,regStep$residuals)
 # plot(weighted_model$fitted.values,banco2$CAD)
 # bptest(weighted_model)
+
+
