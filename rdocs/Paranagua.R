@@ -333,7 +333,7 @@ modelo_stepwise <- step(modelo_inicial, direction = "both")
 
 # Modelo stepwise encontrado
 
-#modelo <- lm(data = perfis, CAD ~ PROFUND + CC + AREIA_GROS + AREIA_FINA + ARGILA)
+modelo <- lm(data = perfis, CAD ~ PROFUND + CC + AREIA_GROS + AREIA_FINA + ARGILA)
 #modelo <- lm(data = perfis, CAD ~ DENSIDADE + CC + AREIA_GROS + AREIA_FINA + SILTE + ARGILA)
 #modelo <- lm(data = perfis, CAD ~ CC + AREIA_GROS + ARGILA)
 modelo <- lm(data = perfis, CAD ~ CC + ARGILA)
@@ -719,32 +719,6 @@ abline(h = 0, col = "red")  # linha horizontal em y = 0 para auxiliar na visuali
 
 plot(modelo$residuals)
 
-## Medidas importantes
-
-preditos <- modelo %>% predict(perfis)
-
-# R2
-
-summary(modelo)
-
-# MAE
-
-MAE <- mean(abs(perfis$CAD - preditos));MAE
-
-# RMSE
-
-RMSE <- sqrt(mean((perfis$CAD - preditos)^2));RMSE
-
-# MSE
-
-residuos <- residuals(modelo)^2
-
-MSE <- mean(residuos); MSE
-
-# MSPR
-
-(MSPR = sum((perfis$CAD-preditos)^2)/64)
-
 
 
 # Observações influentes
@@ -758,10 +732,6 @@ plot(indice,cooks.distance(modelo), type = "l")
 plot(modelo,which=4)
 
 ols_plot_cooksd_chart(modelo)
-
-
-
-
 
 # Serra da Ibiapaba
 
@@ -828,33 +798,6 @@ abline(h = 0, col = "red")  # linha horizontal em y = 0 para auxiliar na visuali
 # independencia
 
 plot(modelo$residuals)
-
-## Medidas importantes
-
-preditos <- modelo %>% predict(perfis)
-
-# R2
-
-summary(modelo)
-
-# MAE
-
-MAE <- mean(abs(perfis$CAD - preditos));MAE
-
-# RMSE
-
-RMSE <- sqrt(mean((perfis$CAD - preditos)^2));RMSE
-
-# MSE
-
-residuos <- residuals(modelo)^2
-
-MSE <- mean(residuos); MSE
-
-# MSPR
-
-(MSPR = sum((perfis$CAD-preditos)^2)/64)
-
 
 
 # Observações influentes
