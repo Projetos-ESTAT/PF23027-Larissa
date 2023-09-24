@@ -26,11 +26,14 @@ source("rdocs/source/packages.R")
 pacman::p_load(
   "readxl", "dplyr", "ggplot2", "tidyr",
   "kableExtra", "ggcorrplot", "psych", "purrr",
-  "caret", "gvlma", "lmtest"
+  "caret", "gvlma", "lmtest", "GGally", "ggResidpanel"
 )
+install.packages("devtools")
 ## pacotes
 library(summarytools)
+library(devtools)
 library(olsrr)
+library(GGally)
 require(lmtest)
 require(lawstat)
 library(EnvStats)
@@ -41,6 +44,7 @@ library(readxl)
 library(Hmisc)
 library(corrplot)
 library(tidyverse)
+#devtools::install_github("goodekat/ggResidpanel")
 setwd('D:/Downloads/ESTAT/PF23027-Larissa/banco')
 banco <- read_excel("perfis_cad_analiseestatistica_19_07.xlsx")
 caminho <- "D:/Downloads/ESTAT/PF23027-Larissa/resultados"
@@ -54,16 +58,20 @@ banco1<-banco%>%
   select(CAD, Altitude = ALTITUDE, `Areia Fina`= AREIA_FINA,`Areia Grossa`=AREIA_GROS, Argila=ARGILA, CC,  Densidade=DENSIDADE, Profundidade = PROFUND, PMP, Domínio = dominios_n, Perfil=PERFIL,  Silte=SILTE, Declividade=DECLIVID, Drenagem=DRENAGEM)
 
 plot(banco1)
+
 ########### transformação BOX-COX ###########
 
-model1<-lm((CAD)^0.4~Silte+Altitude+Densidade + `Areia Fina`+`Areia Grossa`+ as.factor(Declividade)+as.factor(Drenagem), data=banco1) # + as.factor(Declividade)+as.factor(Drenagem)   # + 1/PMP + 1/CC
+model1<-lm((CAD)^0.4~ Argila+Silte+Altitude+Densidade data=banco1) # + as.factor(Declividade)+as.factor(Drenagem)   # + 1/PMP + 1/CC
 summary(model1)
+resid_panel(model1)
+residuos=model1$residuals
+shapiro.test(residuos)
 
-' a profundidade tira a normalidade e argila dá ruim com o vif, sabe-se lá pq ' 
+' Argila+Silte+Altitude+Densidade + Profundidade + `Areia Fina`+`Areia Grossa`' 
 
 ' A transformação de Box-Cox é uma técnica estatística usada para estabilizar a variância e tornar os dados mais próximos de uma distribuição normal. '
 
-confint(model1, level=.95)
+#confint(model1, level=.95)
 
 ########### Normalidade ###########
 
@@ -147,3 +155,39 @@ modelo_stepwise <- step(modelo_inicial, direction = "both")
 (CAD)^0.4 ~ Silte + Altitude + `Areia Fina` + `Areia Grossa` + 
     as.factor(Declividade) + as.factor(Drenagem) '  # a densidade sai
 
+###################################################
+###########  APELANDO PRA MULTIVARIADA ############
+
+attach(banco1)
+modelo1=lm((CAD)^0.4~Silte + sqrt(Altitude) + sqrt(`Areia Fina`) + `Areia Grossa` + sqrt(Densidade) + sqrt(Argila) + sqrt(Profundidade))
+modelo_inicial <- lm(modelo1, data = banco1)
+modelo_stepwise <- step(modelo_inicial, direction = "both") 
+
+
+modelo2=lm(CC~Silte+Altitude + `Areia Fina`+`Areia Grossa`+ Densidade+ Argila +Profundidade)
+modelo_inicial <- lm(modelo2, data = banco1)
+modelo_stepwise <- step(modelo_inicial, direction = "both")
+
+modelo3=lm(PMP~Silte+Altitude + `Areia Fina`+`Areia Grossa`+ Densidade+ Argila +Profundidade)
+modelo_inicial <- lm(modelo3, data = banco1)
+modelo_stepwise <- step(modelo_inicial, direction = "both")
+
+
+summary(modelo1)
+summary(modelo2)
+summary(modelo3)
+
+resid_panel(modelo1)
+residuos=modelo1$residuals
+shapiro.test(residuos)
+
+resid_panel(modelo2)
+residuos=modelo2$residuals
+shapiro.test(residuos)
+
+resid_panel(modelo3)
+residuos=modelo3$residuals
+shapiro.test(residuos)
+
+modelo_multivariado <- lm(cbind(CAD, CC,PMP)~ Silte+Altitude + `Areia Fina`+`Areia Grossa`+ Densidade+ Argila +Profundidade, data = banco1)
+summary(modelo_multivariado)
